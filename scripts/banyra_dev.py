@@ -55,6 +55,28 @@ def healthy(port: int) -> bool:
         return False
 
 
+def service_environments() -> tuple[dict[str, str], dict[str, str], str]:
+    """Allow only this Codespace's forwarded hostname, retaining Vite checks."""
+    backend_env = os.environ.copy()
+    frontend_env = os.environ.copy()
+    origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+    name = os.environ.get("CODESPACE_NAME", "")
+    frontend_host = "127.0.0.1"
+    if name:
+        domain = os.environ.get("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev")
+        preview_host = f"{name}-5173.{domain}"
+        frontend_env["__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS"] = preview_host
+        if f"https://{preview_host}" not in origins.split(","):
+            origins += f",https://{preview_host}"
+        frontend_host = "0.0.0.0"
+    backend_env.update({
+        "OE_DATA_DIR": str(DATA), "OE_DISABLE_UPDATE_CHECK": "1",
+        "OE_DOWNLOAD_EMBEDDING_MODEL": "0", "REDIS_URL": "",
+        "ALLOWED_ORIGINS": origins,
+    })
+    return backend_env, frontend_env, frontend_host
+
+
 def launch() -> None:
     if not (ROOT / ".venv" / "bin" / "openconstructionerp").is_file():
         raise SystemExit("Install backend dependencies in .venv first.")
@@ -63,17 +85,12 @@ def launch() -> None:
     LOGS.mkdir(parents=True, exist_ok=True)
     DATA.mkdir(parents=True, exist_ok=True)
     state = read_state()
-    backend_env = os.environ.copy()
-    backend_env.update({
-        "OE_DATA_DIR": str(DATA), "OE_DISABLE_UPDATE_CHECK": "1",
-        "OE_DOWNLOAD_EMBEDDING_MODEL": "0", "REDIS_URL": "",
-        "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
-    })
+    backend_env, frontend_env, frontend_host = service_environments()
     services = {
         "backend": (8000, ROOT / "backend", backend_env, [str(ROOT / ".venv" / "bin" / "openconstructionerp"),
             "serve", "--host", "127.0.0.1", "--port", "8000", "--data-dir", str(DATA), "--demo"]),
-        "frontend": (5173, ROOT / "frontend", os.environ.copy(), ["npm", "run", "dev", "--",
-            "--host", "127.0.0.1", "--port", "5173", "--strictPort"]),
+        "frontend": (5173, ROOT / "frontend", frontend_env, ["npm", "run", "dev", "--",
+            "--host", frontend_host, "--port", "5173", "--strictPort"]),
     }
     for name, (port, cwd, env, command) in services.items():
         if live(state.get(name, {})):

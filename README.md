@@ -17,6 +17,34 @@ Cette première version utilise le nom provisoire **Banyra**. La disponibilité 
 `banyra.ma` reste à vérifier. Ce dépôt contient le code source ; aucune adresse
 publique de l’application n’a encore été déployée.
 
+## Ouvrir un aperçu dans le navigateur avec GitHub Codespaces
+
+1. Ouvrir [le dépôt GitHub](https://github.com/hajarsen/ChantierPilote).
+2. Cliquer **Code → Codespaces → Create codespace on main**.
+   La configuration demande une machine **4 cœurs / 16 Go de RAM**, nécessaire
+   pour compiler le frontend. Codespaces utilise le quota de votre compte GitHub.
+3. Attendre la fin de l’installation et de la compilation initiales, puis le
+   démarrage des deux services. Le premier lancement peut prendre plusieurs minutes.
+4. Quand les deux services sont prêts, ouvrir l’onglet **Ports**, puis
+   **Open in Browser** pour le port **5173**. Laisser sa visibilité **Private**.
+5. Sur la page Banyra, cliquer **Explorer l’espace de démonstration**.
+
+Le lien de l’application est généré par votre Codespace après sa création.
+Il reste utilisable tant que le Codespace tourne. Aucun domaine `.ma` n’est
+nécessaire pour cet aperçu. La configuration est fournie dans `.devcontainer/` ;
+la création du Codespace se fait depuis votre compte GitHub.
+
+Si les services ne démarrent pas, ouvrir le terminal du Codespace et exécuter :
+
+```bash
+python3 scripts/banyra_dev.py start --wait 180
+python3 scripts/banyra_dev.py status
+```
+
+Si l’installation initiale a échoué, corriger l’erreur affichée puis relancer
+`bash .devcontainer/setup.sh` avant ces commandes. Arrêter le Codespace après
+utilisation pour préserver votre quota.
+
 ## Démarrer en local
 
 Prérequis : Linux, Python 3.12+, Node.js 24 et au moins 16 Go de RAM pour la
