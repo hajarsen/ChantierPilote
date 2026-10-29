@@ -12,6 +12,7 @@ import { Brand } from './Brand';
 import { csvCell, fieldKind, loadDiaries, loadTasks, loadPortfolioTasks, projectsApi, type FieldKind } from './api';
 import { FieldDialog, type DialogMode } from './FieldDialog';
 import { Commercial } from './Commercial';
+import { ModelFeatures } from './ModelFeatures';
 import { usePilotCopy } from './copy';
 import './pilot.css';
 
@@ -160,6 +161,7 @@ export default function PilotPage() {
         </section><section className="cp-panel cp-priorities"><div className="cp-section-heading"><h2>{t('priorities')}</h2><span className="cp-pill">{open.length}</span></div>{nextTasks.length ? <div>{nextTasks.map((task) => <button key={task.id} className="cp-priority-item" onClick={() => setDialog(task)}><span className={`cp-priority-dot cp-priority-${task.priority}`} /><span><strong>{task.title}</strong><small>{task.due_date ? dateLabel(task.due_date) : t('noDate')} · {task.assigned_to_name || t('unnamed')}</small></span><ArrowUpRight size={16} /></button>)}</div> : empty('noActions', 'noActionsSub')}
           <button className="cp-text-button" onClick={() => setDialog('actions')}><Plus size={16} />{t('newAction')}</button>
         </section></div>
+        <ModelFeatures />
         <section className="cp-panel"><div className="cp-section-heading"><div><h2>{t('focus')}</h2><p>{t('focusSub')}</p></div><Link to="/pilot/diary">{t('seeAll')}<ArrowRight size={15} /></Link></div>{diaryList()}</section>
       </>}
       {view === 'projects' && <section className="cp-project-grid cp-project-grid-full">{filteredProjects.length ? filteredProjects.map(projectCard) : empty(needle ? 'noResults' : 'noProjects', 'noProjectsSub', () => setDialog('project'), 'newProject')}</section>}

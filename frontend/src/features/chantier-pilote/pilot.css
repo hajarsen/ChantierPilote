@@ -184,6 +184,8 @@
 .cp-table td:first-child{white-space:normal;min-width:180px}
 .cp-table small{display:block;font-size:8px;color:#a2aa97}
 .cp-table a{color:#356c4d;text-decoration:underline;text-underline-offset:3px}
+.cp-model-features th[scope="row"]{white-space:normal;min-width:150px;color:var(--cp-ink);font-size:11px;border-bottom:1px solid #edf0e6}
+.cp-model-features td{white-space:normal;min-width:220px}
 .cp-menu-toggle{display:none}
 .cp-menu-backdrop{display:none}
 .cp-login{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr;background:#f9faf5}
