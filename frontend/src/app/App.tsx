@@ -1250,6 +1250,9 @@ export default function App() {
       {isAuthenticated && !pilotSurface && <ProductTour />}
       <Routes>
         <Route path="/" element={<Navigate to="/pilot" replace />} />
+        <Route path="/pilot/estimates/:projectId/edit/:boqId" element={<RequireAuth><ErrorBoundary><PilotPage /></ErrorBoundary></RequireAuth>} />
+        <Route path="/pilot/model/:projectId/:modelId" element={<RequireAuth><ErrorBoundary><PilotPage /></ErrorBoundary></RequireAuth>} />
+        <Route path="/pilot/:workspace/:projectId/*" element={<RequireAuth><ErrorBoundary><PilotPage /></ErrorBoundary></RequireAuth>} />
         <Route path="/pilot/*" element={<RequireAuth><ErrorBoundary><PilotPage /></ErrorBoundary></RequireAuth>} />
         {/* Public share-link landing page — no auth required, no app shell */}
         <Route path="/share/:token" element={<SharePage />} />

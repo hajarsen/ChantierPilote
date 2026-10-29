@@ -1,8 +1,9 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 import { useState, useMemo, useCallback, useEffect, useRef, memo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -2122,7 +2123,7 @@ function MonteCarloPanel({ projectId, currency }: { projectId: string; currency:
 
 function FiveDDashboard({ project }: { project: Project }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const [selectedBoqId, setSelectedBoqId] = useState('');
@@ -2822,8 +2823,9 @@ function HowCostModelConnects() {
 }
 
 export function CostModelPage() {
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   // The user can explicitly return to the picker; once they do we stop
   // auto-jumping to the active project for the rest of the visit.
@@ -2840,13 +2842,14 @@ export function CostModelPage() {
   // selection wins, otherwise default to the globally active project when it is
   // in the list, otherwise to the only project if there is just one.
   const effectiveProjectId = useMemo(() => {
+    if (routeProjectId) return routeProjectId;
     if (selectedProjectId) return selectedProjectId;
     if (showPicker) return null;
     if (activeProjectId && projects?.some((p) => p.id === activeProjectId)) {
       return activeProjectId;
     }
     return projects?.length === 1 ? projects[0]!.id : null;
-  }, [selectedProjectId, showPicker, activeProjectId, projects]);
+  }, [routeProjectId, selectedProjectId, showPicker, activeProjectId, projects]);
 
   const selectedProject = useMemo(
     () => (effectiveProjectId ? projects?.find((p) => p.id === effectiveProjectId) : null),
@@ -2854,9 +2857,10 @@ export function CostModelPage() {
   );
 
   const handleBack = useCallback(() => {
+    if (routeProjectId) { navigate('/projects'); return; }
     setSelectedProjectId(null);
     setShowPicker(true);
-  }, []);
+  }, [routeProjectId, navigate]);
 
   // Feature cards for the empty/intro state
   const featureCards = useMemo(

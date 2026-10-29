@@ -316,11 +316,9 @@ export async function uploadPunchPhoto(
   const formData = new FormData();
   formData.append('file', file);
   appendCaptureFields(formData, capture);
-  const token = localStorage.getItem('oe_access_token');
-  const res = await fetch(`/api/v1/punchlist/items/${id}/photos/`, {
+  const res = await fetchWithAuth(`${API_BASE}/v1/punchlist/items/${id}/photos/`, {
     method: 'POST',
     headers: {
-      Authorization: token ? `Bearer ${token}` : '',
       'X-DDC-Client': 'OE/1.0',
     },
     body: formData,

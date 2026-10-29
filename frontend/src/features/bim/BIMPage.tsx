@@ -1,3 +1,4 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 /**
@@ -16,7 +17,7 @@
 import { Fragment, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -556,7 +557,7 @@ function UploadPanel({
   initialModelName?: string;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [modelName, setModelName] = useState(initialModelName || '');
@@ -1580,7 +1581,7 @@ function LandingPage({ projectId, onUploadComplete: _onUploadComplete, breadcrum
 }) {
   const { t } = useTranslation();
   const converterRanges = useConverterRanges(['rvt', 'ifc']);
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [meshImportFile, setMeshImportFile] = useState<File | null>(null);
   const [modelName, setModelName] = useState('');
@@ -2214,10 +2215,10 @@ function LandingPage({ projectId, onUploadComplete: _onUploadComplete, breadcrum
 
 /* ── Main BIM Page ───────────────────────────────────────────────────── */
 
-export function BIMPage() {
+export function BIMPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const { projectId: urlProjectId, modelId: urlModelId } = useParams<{ projectId?: string; modelId?: string }>();
   const contextProjectId = useProjectContextStore((s) => s.activeProjectId);
   const contextProjectName = useProjectContextStore((s) => s.activeProjectName);
@@ -2625,7 +2626,7 @@ export function BIMPage() {
 
   // Sync URL when active model changes
   useEffect(() => {
-    if (!activeModelId) return;
+    if (embedded || !activeModelId) return;
     // Never write a model that is not in this project's list into the URL.
     if (activeModelId !== urlModelId && !models.some((m) => m.id === activeModelId)) return;
     const basePath = urlProjectId ? `/projects/${urlProjectId}/bim` : '/bim';
@@ -2633,7 +2634,7 @@ export function BIMPage() {
     if (!window.location.pathname.endsWith(activeModelId)) {
       navigate(targetPath, { replace: true, state: uploadPanelNavState(uploadOpenRef.current) });
     }
-  }, [activeModelId, urlProjectId, urlModelId, models, navigate]);
+  }, [embedded, activeModelId, urlProjectId, urlModelId, models, navigate]);
 
   // Reset transient viewer state when switching between models - covers the
   // auto-pick + deep-link paths above which only set activeModelId without

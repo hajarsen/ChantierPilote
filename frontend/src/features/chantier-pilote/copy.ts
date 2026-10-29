@@ -4,10 +4,14 @@ import { useTranslation } from 'react-i18next';
 // This product edition is intentionally French. Its own namespace keeps the
 // field vocabulary independent of the upstream ERP's large locale bundles.
 export const copy = {
+  plans: 'Plans & documents', reserves: 'Réserves & photos', planning: 'Planning & avancement',
+  estimates: 'Devis & métrés', model: 'Maquette 3D', coordination: 'Liaisons 4D / 5D',
+  workspaceChoose: 'Sélectionnez un chantier pour ouvrir cet espace et retrouver ses données.',
+  projectUnavailable: 'Ce chantier est introuvable ou vous n’avez pas accès à ses données. Sélectionnez un autre chantier.',
   brand: 'Banyra', costs: 'Budget & coûts', purchases: 'Achats & livraisons',
   queued: 'En attente de synchronisation. Cette demande n’est pas encore confirmée par le serveur. Ne la saisissez pas une deuxième fois.',
   budget: 'Enveloppe du chantier', committed: 'Engagé', invoiced: 'Facturé', forecast: 'Prévision à terminaison',
-  editBudget: 'Définir l’enveloppe', costDetails: 'Ouvrir le contrôle des coûts', estimates: 'Devis & métrés',
+  editBudget: 'Définir l’enveloppe', costDetails: 'Ouvrir le contrôle des coûts',
   commercialSub: 'Reliez les décisions du terrain à la réalité économique de votre chantier.',
   purchaseSub: 'Des commandes aux livraisons : gardez la chaîne d’approvisionnement en vue.',
   selectCommercial: 'Sélectionnez un chantier pour consulter ses données financières.',

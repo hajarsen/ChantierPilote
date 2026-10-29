@@ -1,3 +1,4 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 /**
@@ -15,7 +16,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera,
@@ -89,7 +90,7 @@ export function PlanRoomPage({ documentId: documentIdProp, initialPage }: PlanRo
   const qc = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
 
   const activeProjectId = useProjectContextStore((s) => s.activeProjectId);
   const activeProjectName = useProjectContextStore((s) => s.activeProjectName);

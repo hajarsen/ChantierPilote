@@ -309,3 +309,13 @@
 .cp-login-box h2{font-size:26px}
 .cp-login-form>.cp-attribution{bottom:18px}}
 @media(prefers-reduced-motion:reduce){.cp-app *{animation:none!important;transition:none!important}}
+
+/* Domain tools inherit Banyra's light surfaces, independently of the ERP theme. */
+.cp-erp-workspace{--oe-bg:#f5f6f1;--oe-bg-secondary:#fff;--oe-bg-tertiary:#edf3e9;--oe-bg-elevated:#fff;--oe-text:#203d33;--oe-text-secondary:#526454;--oe-text-tertiary:#607163;--oe-border:#dce4d7;--oe-blue:#24634d;--oe-blue-text:#20533f;--oe-blue-subtle:#eaf2e7;color:#203d33;color-scheme:light;min-width:0;max-width:100%;overflow-x:auto;border:1px solid var(--cp-line);border-radius:12px;background:#fff;padding:16px}
+.cp-erp-workspace h1,.cp-erp-workspace h2,.cp-erp-workspace h3,.cp-erp-workspace p{margin:revert}
+.cp-model-features th a{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#20533f;text-decoration:underline;text-underline-offset:3px}
+.cp-erp-workspace input[type=checkbox],.cp-erp-workspace input[type=radio]{padding:0}
+@media(max-width:700px){.cp-erp-workspace{padding:8px}.cp-sidebar nav a{padding-top:9px;padding-bottom:9px}}
+.cp-workspace-tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.cp-erp-workspace .cp-workspace-hint{margin:0 0 14px;color:#526454;max-width:900px}
+.cp-erp-workspace{--oe-text-primary:#203d33;--oe-text-quaternary:#657568;--oe-text-inverse:#fff;--oe-bg-page:#f5f6f1;--oe-bg-ch:245 246 241;--oe-bg-secondary-ch:255 255 255;--oe-bg-tertiary-ch:237 243 233;--oe-bg-elevated-ch:255 255 255;--oe-bg-page-ch:245 246 241;--oe-blue-ch:36 99 77;--oe-blue-hover:#1d503d;--oe-blue-active:#184332;--oe-blue-dark:#1d503d;--oe-border-light:#e3e9de;--oe-border-focus:#24634d;--oe-border-default:#dce4d7}

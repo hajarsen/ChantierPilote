@@ -1,8 +1,9 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import {
@@ -271,7 +272,7 @@ function PunchSourceBadge({
   className?: string;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const link = resolvePunchSourceLink(item);
   if (!link) return null;
 
@@ -1096,7 +1097,7 @@ function KanbanView({
 
 export function PunchListPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
@@ -2176,7 +2177,7 @@ const PunchTableRow = React.memo(function PunchTableRow({
   highlight?: boolean;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const transitions = STATUS_TRANSITION[item.status] ?? [];
   const rowRef = useRef<HTMLTableRowElement>(null);
   const [flash, setFlash] = useState(false);

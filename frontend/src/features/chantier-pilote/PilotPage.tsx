@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, ArrowRight, ArrowUpRight, Building2, Check, CheckCircle2, ChevronDown, CircleDashed, ClipboardCheck,
   ClipboardList, HardHat, LayoutDashboard, Loader2, LogOut, Menu, Plus, RefreshCw, Search, ShieldCheck, Sparkles, Wallet, Truck, X, MapPin, CalendarDays } from 'lucide-react';
@@ -13,6 +13,8 @@ import { csvCell, fieldKind, loadDiaries, loadTasks, loadPortfolioTasks, project
 import { FieldDialog, type DialogMode } from './FieldDialog';
 import { Commercial } from './Commercial';
 import { ModelFeatures } from './ModelFeatures';
+import { ErpWorkspace } from './ErpWorkspace';
+import { isWorkspace, workspaces, workspacePath } from './workspaces';
 import { usePilotCopy } from './copy';
 import './pilot.css';
 
@@ -21,19 +23,34 @@ const navigation = [
   { id: 'actions', icon: ClipboardList }, { id: 'quality', icon: ClipboardCheck },
   { id: 'safety', icon: ShieldCheck }, { id: 'diary', icon: CalendarDays },
   { id: 'costs', icon: Wallet }, { id: 'purchases', icon: Truck },
+  ...workspaces.map(({ id, icon }) => ({ id, icon })),
 ];
 const dateLabel = (value: string) => new Intl.DateTimeFormat('fr-MA', { day: 'numeric', month: 'short' }).format(new Date(`${value.slice(0, 10)}T12:00:00`));
 
 export default function PilotPage() {
+  // Banyra has a light visual identity. Shared tools and portalled dialogs
+  // must use that same theme; restore the ERP preference when leaving Banyra.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains('dark');
+    const keepLight = () => { if (root.classList.contains('dark')) root.classList.remove('dark'); };
+    keepLight();
+    const observer = new MutationObserver(keepLight);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => { observer.disconnect(); root.classList.toggle('dark', wasDark); };
+  }, []);
   const { t, i18n } = usePilotCopy();
   const location = useLocation();
   const navigate = useNavigate();
+  const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
   const queryClient = useQueryClient();
   const auth = useAuthStore();
   const view = navigation.some((n) => n.id === location.pathname.split('/')[2]) ? location.pathname.split('/')[2]! : 'overview';
-  const [projectId, setProjectId] = useState(() => {
+  const [selectedProjectId, setProjectId] = useState(() => {
     try { return sessionStorage.getItem(`banyra.project.${auth.userId}`) || ''; } catch { return ''; }
   });
+  const projectId = routeProjectId ?? selectedProjectId;
+  const workspace = isWorkspace(view) ? workspaces.find((item) => item.id === view) : undefined;
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [dialog, setDialog] = useState<DialogMode | null>(null);
@@ -43,22 +60,28 @@ export default function PilotPage() {
   const key = ['cp', auth.userId];
   const projects = useQuery({ queryKey: [...key, 'projects'], queryFn: projectsApi.list });
   const portfolioIds = (projects.data ?? []).map((p) => p.id);
-  const tasks = useQuery({ queryKey: [...key, 'tasks', projectId, portfolioIds.join(',')], enabled: projects.isSuccess,
-    queryFn: () => projectId ? loadTasks(projectId) : loadPortfolioTasks(portfolioIds) });
-  const diaries = useQuery({ queryKey: [...key, 'diaries', projectId], queryFn: () => loadDiaries(projectId), enabled: !!projectId });
+  const tasks = useQuery({ queryKey: [...key, 'tasks', projectId, portfolioIds.join(',')], enabled: projects.isSuccess && !workspace,
+    queryFn: () => projectId ? projects.data?.some((p) => p.id === projectId) ? loadTasks(projectId) : Promise.resolve([]) : loadPortfolioTasks(portfolioIds) });
+  const diaries = useQuery({ queryKey: [...key, 'diaries', projectId], queryFn: () => loadDiaries(projectId), enabled: !!projectId && (view === 'overview' || view === 'diary') });
   const rows = tasks.data ?? [];
   const projectRows = projects.data ?? [];
+  useEffect(() => {
+    if (isWorkspace(view) && projectId && !routeProjectId && projects.data?.some((p) => p.id === projectId)) {
+      navigate(`${workspacePath(view, projectId)}${location.search}`, { replace: true });
+    }
+  }, [view, projectId, routeProjectId, projects.data, navigate, location.search]);
   const needle = search.trim().toLocaleLowerCase('fr');
   const filteredProjects = projectRows.filter((p) => (!projectId || p.id === projectId) && `${p.name} ${p.address?.city ?? ''}`.toLocaleLowerCase('fr').includes(needle));
   const name = auth.userFullName || auth.userEmail?.split('@')[0] || t('workspace');
   const initials = name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   useEffect(() => {
-    if (projects.isSuccess && projectId && !projects.data.some((p) => p.id === projectId)) setProjectId('');
+    if (projects.isSuccess && projectId && !projects.data.some((p) => p.id === projectId) && !routeProjectId) setProjectId('');
     try { sessionStorage.setItem(`banyra.project.${auth.userId}`, projectId); } catch { /* Session storage is optional. */ }
   }, [auth.userId, projectId, projects.data, projects.isSuccess]);
   useEffect(() => {
     const project = projectRows.find((p) => p.id === projectId);
     if (project) useProjectContextStore.getState().setActiveProject(project.id, project.name);
+    else if (!projectId) useProjectContextStore.getState().clearProject();
   }, [projectId, projects.data]);
   useEffect(() => { document.title = `${t(view)} · Banyra`; if (i18n.language !== 'fr') void i18n.changeLanguage('fr'); }, [i18n, t, view]);
   useEffect(() => {
@@ -128,7 +151,7 @@ export default function PilotPage() {
   return <div className="cp-app cp-shell">
     {menu && <button className="cp-menu-backdrop" aria-label={t('close')} onClick={() => setMenu(false)} />}
     <aside className={`cp-sidebar ${menu ? 'cp-menu-open' : ''}`}><Brand /><span className="cp-nav-label">{t('workspace')}</span>
-      <nav aria-label={t('workspace')}>{navigation.map(({ id, icon: Icon }) => <NavLink key={id} to={id === 'overview' ? '/pilot' : `/pilot/${id}`} end={id === 'overview'} className={({ isActive }) => isActive ? 'cp-nav-active' : ''}><Icon size={19} /><span>{t(id)}</span>{id === 'actions' && open.length > 0 && <b>{open.length}</b>}</NavLink>)}</nav>
+      <nav aria-label={t('workspace')}>{navigation.map(({ id, icon: Icon }) => <NavLink key={id} to={id === 'overview' ? '/pilot' : isWorkspace(id) ? workspacePath(id, projectId) : `/pilot/${id}`} end={id === 'overview'} className={({ isActive }) => isActive ? 'cp-nav-active' : ''}><Icon size={19} /><span>{t(id)}</span>{id === 'actions' && open.length > 0 && <b>{open.length}</b>}</NavLink>)}</nav>
       <div className="cp-sidebar-bottom"><div className="cp-tip"><Sparkles size={21} /><h4>{t('helpTitle')}</h4><p>{t('helpText')}</p></div>
         <Link className="cp-erp-link" to="/projects">{t('erp')}<ArrowUpRight size={15} /></Link>
         <button className="cp-user" onClick={() => { auth.logout(); queryClient.removeQueries({ queryKey: ['cp'] }); navigate('/login'); }} title={t('logout')}><span className="cp-avatar">{initials}</span><span><strong>{name}</strong><small>{t('logout')}</small></span><LogOut size={17} /></button>
@@ -137,17 +160,17 @@ export default function PilotPage() {
     <div className="cp-main"><header className="cp-topbar"><div className="cp-breadcrumb"><button className="cp-icon-button cp-menu-toggle" aria-label={t('menu')} onClick={() => setMenu(true)}><Menu /></button><span>{t('workspace')}</span><span>/</span><strong>{t(view)}</strong></div>
       <div className="cp-topbar-right"><span className={`cp-online ${online ? '' : 'cp-offline'}`}><i />{t(online ? 'connected' : 'offline')}</span><span className="cp-avatar cp-avatar-small">{initials}</span></div>
     </header>
-    <main className="cp-content"><div className="cp-page-heading"><div><span className="cp-eyebrow">BANYRA / {new Intl.DateTimeFormat('fr-MA', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Casablanca' }).format(new Date())}</span><h1>{t(view)}</h1><p>{view === 'overview' ? t('onTime') : t(view === 'costs' ? 'commercialSub' : view === 'purchases' ? 'purchaseSub' : `pageSub.${view}`)}</p></div>
-      {!['costs', 'purchases'].includes(view) && <button className="cp-button cp-primary" onClick={newRecord} disabled={!online}><Plus size={18} />{t(view === 'projects' || view === 'overview' ? 'newProject' : view === 'quality' ? 'newQuality' : view === 'safety' ? 'newSafety' : view === 'diary' ? 'newDiary' : 'newAction')}</button>}
+    <main className="cp-content"><div className="cp-page-heading"><div><span className="cp-eyebrow">BANYRA / {new Intl.DateTimeFormat('fr-MA', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Casablanca' }).format(new Date())}</span><h1>{t(view)}</h1><p>{workspace ? workspace.description : view === 'overview' ? t('onTime') : t(view === 'costs' ? 'commercialSub' : view === 'purchases' ? 'purchaseSub' : `pageSub.${view}`)}</p></div>
+      {!workspace && !['costs', 'purchases'].includes(view) && <button className="cp-button cp-primary" onClick={newRecord} disabled={!online}><Plus size={18} />{t(view === 'projects' || view === 'overview' ? 'newProject' : view === 'quality' ? 'newQuality' : view === 'safety' ? 'newSafety' : view === 'diary' ? 'newDiary' : 'newAction')}</button>}
     </div>
-    <div className="cp-toolbar"><div className="cp-search"><Search size={17} /><input aria-label={t('search')} placeholder={t('search')} value={search} onChange={(e) => setSearch(e.target.value)} />{search && <button aria-label={t('close')} onClick={() => setSearch('')}><X size={16} /></button>}</div>
-      <div className="cp-project-picker"><Building2 size={16} /><select aria-label={t('project')} value={projectId} onChange={(e) => setProjectId(e.target.value)}><option value="">{t('allProjects')}</option>{projectRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><ChevronDown size={14} /></div>
-      <button className="cp-icon-button" aria-label={t('refresh')} onClick={() => void queryClient.invalidateQueries({ queryKey: key })}><RefreshCw size={17} /></button>
+    <div className="cp-toolbar">{!workspace && <div className="cp-search"><Search size={17} /><input aria-label={t('search')} placeholder={t('search')} value={search} onChange={(e) => setSearch(e.target.value)} />{search && <button aria-label={t('close')} onClick={() => setSearch('')}><X size={16} /></button>}</div>}
+      <div className="cp-project-picker"><Building2 size={16} /><select aria-label={t('project')} value={projectId} onChange={(e) => { setProjectId(e.target.value); if (isWorkspace(view)) navigate(workspacePath(view, e.target.value)); }}><option value="">{t('allProjects')}</option>{projectRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><ChevronDown size={14} /></div>
+      <button className="cp-icon-button" aria-label={t('refresh')} onClick={() => void queryClient.invalidateQueries(workspace ? {} : { queryKey: key })}><RefreshCw size={17} /></button>
     </div>
     {notice && <div className="cp-notice" role="status"><CheckCircle2 size={18} />{notice}<button aria-label={t('close')} onClick={() => setNotice('')}><X size={16} /></button></div>}
     {!online && <p className="cp-error" role="status">{t('offline')}</p>}
-    {projects.isError || tasks.isError ? <div className="cp-error" role="alert">{t('error')}<button onClick={() => void queryClient.invalidateQueries({ queryKey: key })}>{t('retry')}</button></div>
-      : projects.isPending || tasks.isPending ? <div className="cp-loading"><Loader2 className="cp-spin" />{t('loading')}</div> : <>
+    {projects.isError || (!workspace && tasks.isError) ? <div className="cp-error" role="alert">{t('error')}<button onClick={() => void queryClient.invalidateQueries({ queryKey: key })}>{t('retry')}</button></div>
+      : projects.isPending || (!workspace && tasks.isPending) ? <div className="cp-loading"><Loader2 className="cp-spin" />{t('loading')}</div> : <>
       {view === 'overview' && <>
         <section className="cp-hero"><div><span className="cp-eyebrow"><span className="cp-tiny-dot" />{t('daily')}</span><h2>{t('hero')}</h2><p>{t('heroText')}</p><button className="cp-button cp-dark" onClick={() => setDialog('diary')}><ClipboardList size={17} />{t('newDiary')}<ArrowUpRight size={17} /></button></div><div className="cp-hero-photo"><img src="/chantier-pilote/terrain.jpg" alt={t('photoAlt')} /><div><HardHat size={24} /><span><strong>{t('fieldFirst')}</strong><small>{t('fieldCaption')}</small></span></div></div></section>
         <section className="cp-metrics">{[
@@ -161,13 +184,14 @@ export default function PilotPage() {
         </section><section className="cp-panel cp-priorities"><div className="cp-section-heading"><h2>{t('priorities')}</h2><span className="cp-pill">{open.length}</span></div>{nextTasks.length ? <div>{nextTasks.map((task) => <button key={task.id} className="cp-priority-item" onClick={() => setDialog(task)}><span className={`cp-priority-dot cp-priority-${task.priority}`} /><span><strong>{task.title}</strong><small>{task.due_date ? dateLabel(task.due_date) : t('noDate')} · {task.assigned_to_name || t('unnamed')}</small></span><ArrowUpRight size={16} /></button>)}</div> : empty('noActions', 'noActionsSub')}
           <button className="cp-text-button" onClick={() => setDialog('actions')}><Plus size={16} />{t('newAction')}</button>
         </section></div>
-        <ModelFeatures />
+        <ModelFeatures projectId={projectId} />
         <section className="cp-panel"><div className="cp-section-heading"><div><h2>{t('focus')}</h2><p>{t('focusSub')}</p></div><Link to="/pilot/diary">{t('seeAll')}<ArrowRight size={15} /></Link></div>{diaryList()}</section>
       </>}
       {view === 'projects' && <section className="cp-project-grid cp-project-grid-full">{filteredProjects.length ? filteredProjects.map(projectCard) : empty(needle ? 'noResults' : 'noProjects', 'noProjectsSub', () => setDialog('project'), 'newProject')}</section>}
       {['actions', 'quality', 'safety'].includes(view) && <section className="cp-panel"><div className="cp-list-toolbar"><div className="cp-tabs">{['all', 'open', 'in_progress', 'completed'].map((s) => <button key={s} className={status === s ? 'cp-tab-active' : ''} onClick={() => setStatus(s)}>{t(s)}</button>)}</div><button className="cp-button cp-secondary" onClick={() => exportRows(filteredTasks)}><ArrowDownToLine size={16} />{t('export')}</button></div>
         {filteredTasks.length ? <div>{filteredTasks.map(taskRow)}</div> : empty(needle ? 'noResults' : view === 'quality' ? 'noQuality' : view === 'safety' ? 'noSafety' : 'noActions', view === 'quality' ? 'noQualitySub' : view === 'safety' ? 'noSafetySub' : 'noActionsSub', () => setDialog(view as FieldKind), view === 'quality' ? 'newQuality' : view === 'safety' ? 'newSafety' : 'newAction')}
       </section>}
+      {workspace && (!projectId ? empty('chooseProject', 'workspaceChoose') : !projectRows.some((p) => p.id === projectId) ? <div className="cp-error" role="alert">{t('projectUnavailable')}</div> : <ErpWorkspace key={`${view}:${projectId}`} workspace={workspace.id} project={projectRows.find((p) => p.id === projectId)!} />)}
       {view === 'diary' && <section className="cp-panel">{diaryList()}</section>}
       {(view === 'costs' || view === 'purchases') && <Commercial mode={view} project={projectRows.find((p) => p.id === projectId)} search={needle} onSaved={() => setNotice(t('saved'))} />}
     </>}

@@ -1,9 +1,10 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ChevronDown, X, FileSpreadsheet, FilePlus2, Upload, FileUp } from 'lucide-react';
 import { Button, Input } from '@/shared/ui';
 import { useToastStore } from '@/stores/useToastStore';
@@ -72,7 +73,7 @@ class ImportFailure extends Error {}
 
 export function CreateBOQModal({ open, onClose, defaultProjectId }: CreateBOQModalProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);
 
@@ -532,7 +533,7 @@ export function CreateBOQModal({ open, onClose, defaultProjectId }: CreateBOQMod
 
 // Route compat — redirects to /boq and opens modal
 export function CreateBOQPage() {
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const { projectId } = useParams<{ projectId: string }>();
 
   useEffect(() => {

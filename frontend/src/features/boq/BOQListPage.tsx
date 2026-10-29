@@ -1,9 +1,10 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   Table, Table2, ArrowRight, Copy, Trash2, Plus, Pencil,
   Search, ArrowUpDown, ChevronDown, GitCompareArrows, X, Loader2,
@@ -424,7 +425,7 @@ type SortField = 'name' | 'total' | 'positions' | 'date';
 
 export function BOQListPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const addToast = useToastStore((s) => s.addToast);

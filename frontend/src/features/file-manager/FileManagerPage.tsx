@@ -1,3 +1,4 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 /** Project File Manager — Issue #109.
@@ -11,7 +12,7 @@
 import { ConverterReleaseNotice } from '@/shared/ui/ConverterReleaseNotice';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ChevronRight, HardDrive, UploadCloud, Search, Send, Loader2, ClipboardCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -105,7 +106,7 @@ const VALID_KINDS: ReadonlySet<string> = new Set([
 
 export function FileManagerPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const { projectId: routeProjectId } = useParams<{ projectId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const ctxProjectId = useProjectContextStore((s) => s.activeProjectId);

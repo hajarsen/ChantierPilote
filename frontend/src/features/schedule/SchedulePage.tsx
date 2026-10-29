@@ -1,10 +1,11 @@
+import { useWorkspaceNavigate } from '@/shared/hooks/useWorkspaceNavigate';
 // DDC-CWICR-OE: DataDrivenConstruction · OpenConstructionERP
 // Copyright (c) 2026 Artem Boiko / DataDrivenConstruction
 import { Fragment, useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useHasPermission } from '@/shared/lib/permissionGates';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Calendar,
   CalendarDays,
@@ -471,7 +472,7 @@ function GanttChart({
   zoomLevel?: ZoomLevel;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const ganttBodyRef = useRef<HTMLDivElement>(null);
   const ganttScrollRef = useRef<HTMLDivElement>(null);
   // Debounced progress updates
@@ -1043,7 +1044,7 @@ function GanttChart({
 
 function RiskAnalysisCard({ data }: { data: RiskAnalysisResponse }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
 
   const items = [
     {
@@ -3393,7 +3394,7 @@ function HowScheduleWorks() {
 
 export function SchedulePage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const navigate = useWorkspaceNavigate();
   const { activeProjectId, setActiveProject } = useProjectContextStore();
   const [searchParams, setSearchParams] = useSearchParams();
 
