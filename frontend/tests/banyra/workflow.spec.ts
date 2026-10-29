@@ -7,6 +7,19 @@ test('a site supervisor manages a project, quality check, journal, budget and pu
   await page.getByRole('button', { name: 'Explorer l’espace de démonstration' }).click();
   await expect(page.getByRole('heading', { name: 'Vue d’ensemble', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Vos chantiers en un regard' })).toBeVisible();
+  const modelFeatures = page.getByRole('region', { name: 'Maquette numérique et plans' });
+  await expect(modelFeatures.locator('tbody tr')).toHaveCount(6);
+  // Banyra keeps its light surfaces even when the ERP preference is dark.
+  const inheritedDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+  try {
+    for (const dark of [false, true]) {
+      await page.evaluate((enabled) => document.documentElement.classList.toggle('dark', enabled), dark);
+      await expect(modelFeatures.locator('td').first()).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(modelFeatures.locator('td').first()).toHaveCSS('color', 'rgb(49, 82, 63)');
+    }
+  } finally {
+    await page.evaluate((enabled) => document.documentElement.classList.toggle('dark', enabled), inheritedDark);
+  }
   const name = `Banyra validation ${Date.now()}`;
   let projectId: string | undefined;
   try {

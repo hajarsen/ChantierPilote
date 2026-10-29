@@ -57,7 +57,7 @@ export const copy = {
   safety3: 'Équipements de protection vérifiés', safety4: 'Risques et mesures de prévention partagés',
   checkBeforeClose: 'Validez tous les points de contrôle avant de clôturer.', progress: '{{done}} / {{total}} points vérifiés',
   unnamed: 'Non affecté', noDate: 'Sans échéance', active: 'Actif', waiting: 'En attente', finished: 'Terminé', archived: 'Archivé',
-  taskCount: '{{count}} action(s) ouverte(s)', openProject: 'Piloter ce chantier', recent: 'Derniers journaux',
+  taskCount_one: '{{count}} action ouverte', taskCount_other: '{{count}} actions ouvertes', openProject: 'Piloter ce chantier', recent: 'Derniers journaux',
   diaryHint: 'Un journal par chantier et par jour. Un journal existant est ouvert pour modification.',
   reportLocked: 'Ce journal est clôturé. Consultez-le dans les outils ERP pour le déverrouiller.',
   loginTitle: 'Votre chantier,\nbien accompagné.', loginText: 'Du bureau au terrain, transformez les informations de vos équipes en décisions qui font avancer.',
@@ -68,7 +68,7 @@ export const copy = {
   connected: 'En ligne', offline: 'Hors ligne : reconnectez-vous pour enregistrer', updated: 'Actualisé à {{time}}',
   photoAlt: 'Illustration : équipe sur un chantier de construction', brandAlt: 'Accueil Banyra',
   menu: 'Ouvrir le menu', view: 'Consulter', editDiary: 'Modifier le journal',
-  emptyNotes: 'Aucune note saisie.', people: '{{count}} personne(s)', machines: '{{count}} engin(s)',
+  emptyNotes: 'Aucune note saisie.', people_one: '{{count}} personne', people_other: '{{count}} personnes', machines_one: '{{count}} engin', machines_other: '{{count}} engins',
   pageSub: {
     actions: 'Une action claire, un responsable, une échéance. Rien ne se perd entre le bureau et le terrain.',
     quality: 'Les bons contrôles, au bon moment. Documentez chaque point avant de passer à la suite.',

@@ -1,6 +1,7 @@
 import { apiGet, apiPost, type Page } from '@/shared/lib/api';
 import { fetchAllPages } from '@/shared/lib/apiHelpers';
-import { projectsApi } from '@/features/projects/api';
+import { projectsApi as upstreamProjectsApi } from '@/features/projects/api';
+import { frenchDemoProject, frenchDemoTask } from './demoFrench';
 import type { Task, TaskPriority } from '@/features/tasks/api';
 import type { DailyDiary } from '@/features/daily-diary/api';
 
@@ -15,7 +16,7 @@ export async function loadTasks(projectId: string) {
     `/v1/tasks/?offset=${offset}&limit=${limit}${projectId ? `&project_id=${encodeURIComponent(projectId)}` : ''}`,
   ));
   if (result.truncated) throw new Error('Task register exceeded the safe read limit');
-  return result.items;
+  return result.items.map(frenchDemoTask);
 }
 
 export async function loadPortfolioTasks(projectIds: string[]) {
@@ -49,7 +50,10 @@ export function addFieldTask(data: {
   });
 }
 
-export { projectsApi };
+export const projectsApi = {
+  ...upstreamProjectsApi,
+  list: async () => (await upstreamProjectsApi.list()).map(frenchDemoProject),
+};
 
 export function localDay(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
