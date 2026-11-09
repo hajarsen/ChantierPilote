@@ -76,3 +76,8 @@ docker compose up -d --build
 Prévoyez un volume persistant et sauvegardez ensemble la base de données et les pièces jointes.
 
 Les licences des dépendances sont répertoriées dans [THIRD_PARTY.md](THIRD_PARTY.md).
+
+---
+
+**Projet réalisé par Hajar Sennane**  
+Génie civil · Outils numériques appliqués au suivi de chantier et au BIM
