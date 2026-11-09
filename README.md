@@ -18,9 +18,9 @@ L’objectif est de développer progressivement un outil utile au quotidien, en 
 
 ## Démonstration vidéo
 
-Une visite enregistrée de Banyra : vue d’ensemble, inspection de la maquette BIM,
-simulation 4D, actions terrain, journal de chantier et suivi des dépenses en MAD.
-La vidéo est un enregistrement d’écran fourni par l’autrice du projet, publié sans audio. Les projets et valeurs affichés sont des exemples de démonstration.
+Cette démonstration présente les principaux parcours de Banyra : pilotage des chantiers,
+inspection de la maquette BIM, simulation 4D, suivi des actions terrain, journal de chantier
+et gestion des dépenses. Les projets et les données affichés sont des exemples conçus à des fins de présentation.
 
 [![Aperçu animé de la démonstration Banyra](docs/media/demo-apercu.gif)](docs/media/banyra-demo.mp4)
 
