@@ -8,6 +8,38 @@ Le projet explore l’application du numérique au génie civil, notamment la co
 
 La maquette BIM proposée en démonstration est un duplex résidentiel au format IFC2x3. Le fichier source et sa provenance sont documentés dans [THIRD_PARTY.md](THIRD_PARTY.md).
 
+## Démonstration vidéo
+
+Une visite enregistrée de Banyra : vue d’ensemble, inspection de la maquette BIM,
+simulation 4D, actions terrain, journal de chantier et suivi des dépenses en MAD.
+La vidéo est sans voix, avec des titres en français et uniquement des données fictives.
+
+[![Aperçu animé de la démonstration Banyra](docs/media/demo-apercu.gif)](docs/media/banyra-demo.mp4)
+
+**[▶ Ouvrir la vidéo complète — 45 secondes (MP4)](docs/media/banyra-demo.mp4)**
+
+## Banyra en images
+
+### Vue d’ensemble du chantier
+
+Chantiers marocains, actions prioritaires, contrôles et dépenses en dirhams réunis sur un tableau de bord.
+
+![Vue d’ensemble de Banyra avec les chantiers de démonstration et les indicateurs en MAD](docs/media/vue-ensemble.png)
+
+### Inspection de la maquette BIM 3D
+
+Consultation du duplex IFC, sélection d’un élément, propriétés et filtres par catégorie.
+
+![Maquette BIM 3D du duplex avec un élément sélectionné et ses propriétés IFC](docs/media/maquette-3d.png)
+
+### Planning et simulation 4D
+
+Le planning apparaît au-dessus de la maquette. La date de simulation permet de visualiser le phasage prévu des travaux.
+
+![Planning Gantt et simulation 4D de la maquette dans Banyra](docs/media/planning-4d.png)
+
+Ces captures et la vidéo proviennent de l’application en fonctionnement. Les données présentées sont des exemples de démonstration.
+
 ## Usages pour le suivi de chantier
 
 Banyra regroupe les principales informations nécessaires au suivi d’un projet de construction :
