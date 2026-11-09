@@ -96,9 +96,11 @@ def test_moroccan_demo_and_complete_site_diary(clients):
     data = workspace(owner, pid)
     assert data["project"]["city"] == "Rabat"
     assert data["project"]["budget"] == "18500000.00"
-    assert data["project"]["engineering_office"].endswith("(exemple)")
-    assert len(data["tasks"]) == 3
-    diary = next(entry for entry in data["entries"] if entry["kind"] == "diary")
+    assert data["project"]["is_demo"] == 1
+    assert len(data["tasks"]) == 6
+    assert data["spent"] == "341400.00"
+    assert len(data["contacts"]) == 4
+    diary = max((entry for entry in data["entries"] if entry["kind"] == "diary"), key=lambda e: e["data"]["date"])
     assert diary["data"]["workforce"] == 42
     assert diary["data"]["deliveries"].startswith("72 m³")
     assert diary["data"]["next_day"]
@@ -109,6 +111,34 @@ def test_moroccan_demo_and_complete_site_diary(clients):
     assert uploaded.status_code == 201, uploaded.text
     file_record = next(item for item in workspace(owner, pid)["files"] if item["id"] == uploaded.json()["id"])
     assert file_record["entry_id"] == diary["id"]
+
+
+def test_demo_bootstrap_is_persistent_idempotent_and_private(clients):
+    owner, other, _ = clients
+    register(owner)
+    register(other, "second@example.ma")
+    assert owner.post("/api/demo/bootstrap").status_code == 200
+    portfolio = owner.get("/api/projects").json()
+    assert {p["city"] for p in portfolio} == {"Rabat", "Casablanca", "Marrakech"}
+    assert all(p["is_demo"] and p["open_tasks"] == 5 for p in portfolio)
+    assert other.get("/api/projects").json() == []
+    assert other.get(f"/api/projects/{portfolio[0]['id']}/workspace").status_code == 404
+    for _ in range(2):
+        assert owner.post("/api/demo/bootstrap").status_code == 200
+        assert owner.post("/api/demo").status_code == 201
+    assert owner.get("/api/projects").json() == portfolio
+    assert owner.post("/api/auth/logout").status_code == 200
+    response = owner.post("/api/auth/login", json={"email": "hajar@example.ma", "password": "Banyra-Test-2026"})
+    assert response.status_code == 200
+    assert owner.get("/api/projects").json() == portfolio
+
+
+def test_demo_bootstrap_preserves_real_workspace(clients):
+    owner = clients[0]
+    register(owner)
+    pid = project(owner)
+    assert owner.post("/api/demo/bootstrap").json() == {"created": False}
+    assert [p["id"] for p in owner.get("/api/projects").json()] == [pid]
 
 
 def test_invitations_bind_email_and_are_single_use(clients):

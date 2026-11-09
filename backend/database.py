@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS events (
  id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL REFERENCES projects(id),
  user_id TEXT NOT NULL REFERENCES users(id), description TEXT NOT NULL, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS demo_setups (
+ user_id TEXT PRIMARY KEY REFERENCES users(id), created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS contacts (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
+ name TEXT NOT NULL, role TEXT NOT NULL, company TEXT NOT NULL
+);
 """
 
 
@@ -76,6 +83,7 @@ def initialize(path: Path) -> None:
             "engineering_office": "TEXT NOT NULL DEFAULT ''",
             "contractor": "TEXT NOT NULL DEFAULT ''",
             "site_manager": "TEXT NOT NULL DEFAULT ''",
+            "is_demo": "INTEGER NOT NULL DEFAULT 0",
         }
         existing = {row[1] for row in db.execute("PRAGMA table_info(projects)")}
         for name, definition in project_columns.items():

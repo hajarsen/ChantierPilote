@@ -8,7 +8,6 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity,
   ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
@@ -26,6 +25,7 @@ import {
   LoaderCircle,
   LogOut,
   Menu,
+  MapPin,
   MessageSquare,
   Plus,
   RefreshCw,
@@ -50,16 +50,19 @@ import {
   type Task,
   type Workspace,
 } from "./api";
+import "@fontsource-variable/plus-jakarta-sans";
 import "./style.css";
 
 const nav = [
   ["overview", "Vue d’ensemble", LayoutDashboard],
-  ["tasks", "Actions & réserves", ClipboardList],
-  ["quality", "Qualité & sécurité", ShieldCheck],
+  ["projects", "Mes chantiers", Building2],
+  ["tasks", "Actions terrain", ClipboardList],
+  ["quality", "Contrôles qualité", ShieldCheck],
+  ["safety", "Sécurité", ShieldCheck],
   ["diary", "Journal de chantier", CalendarDays],
-  ["budget", "Budget & dépenses", Wallet],
+  ["budget", "Budget & coûts", Wallet],
   ["contracts", "Marchés & situations", Handshake],
-  ["supplies", "Approvisionnements", Truck],
+  ["supplies", "Achats & livraisons", Truck],
   ["meetings", "Réunions", MessageSquare],
   ["documents", "Plans & documents", FolderOpen],
   ["team", "Équipe du chantier", Users],
@@ -152,7 +155,7 @@ function Brand() {
       </span>
       <span>
         banyra<span className="brand-dot">.</span>
-        <small>Le terrain, en confiance.</small>
+        <small>Vos chantiers, en mouvement.</small>
       </span>
     </span>
   );
@@ -357,6 +360,13 @@ function Auth({
             </span>
           </div>
         </div>
+        <div className="auth-site-photo">
+          <img
+            src="/brand/terrain.png"
+            alt="Illustration d’un chantier au Maroc"
+          />
+          <span>Du bureau au terrain. Votre chantier, votre équipe.</span>
+        </div>
         <small>Conçu pour le quotidien des chantiers au Maroc.</small>
       </section>
       <section className="auth-main">
@@ -467,6 +477,7 @@ function App() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [view, setView] = useState("overview");
   const [loading, setLoading] = useState(false);
+  const [projectsReady, setProjectsReady] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -504,7 +515,17 @@ function App() {
   async function loadProjects() {
     const generation = accountGeneration.current;
     try {
-      const rows = await api<Project[]>("/projects");
+      let rows = await api<Project[]>("/projects");
+      if (generation !== accountGeneration.current) return;
+      if (
+        (!rows.length ||
+          rows.every((p) => p.name.endsWith(" — Démonstration"))) &&
+        !invitation
+      ) {
+        await api("/demo/bootstrap", "POST");
+        if (generation !== accountGeneration.current) return;
+        rows = await api<Project[]>("/projects");
+      }
       if (generation !== accountGeneration.current) return;
       setProjects(rows);
       setProjectId((current) =>
@@ -512,6 +533,8 @@ function App() {
       );
     } catch (error) {
       if (generation === accountGeneration.current) throw error;
+    } finally {
+      if (generation === accountGeneration.current) setProjectsReady(true);
     }
   }
   async function reload(id = selectedProject.current, quiet = false) {
@@ -633,6 +656,10 @@ function App() {
   const tasks = workspace?.tasks ?? [];
   const incomplete = tasks.filter((t) => t.status !== "done");
   const overdue = incomplete.filter((t) => t.due_date && t.due_date < day());
+  const selectProject = (id: string) => {
+    selectedProject.current = id;
+    setProjectId(id);
+  };
 
   async function logout() {
     if (busy) return;
@@ -647,6 +674,7 @@ function App() {
       setCsrf("");
       setWorkspace(null);
       setProjects([]);
+      setProjectsReady(false);
       setProjectId("");
       setNotice("");
     } catch (e) {
@@ -693,6 +721,7 @@ function App() {
             requestId.current++;
             selectedProject.current = "";
             setProjects([]);
+            setProjectsReady(false);
             setProjectId("");
             setWorkspace(null);
             setAccount(user);
@@ -822,7 +851,7 @@ function App() {
         text="Créez une action ou une réserve pour affecter un responsable et une échéance."
         onClick={
           canWrite
-            ? () => open(view === "quality" ? "quality" : "task")
+            ? () => open(["quality", "safety"].includes(view) ? view : "task")
             : undefined
         }
         button="Créer un suivi"
@@ -830,79 +859,139 @@ function App() {
     );
   }
 
+  function ProjectCards({ full = false }: { full?: boolean }) {
+    const rows = projects.filter((project) =>
+      matches(`${project.name} ${project.city} ${project.client}`),
+    );
+    return (
+      <div className={`project-grid ${full ? "project-grid-full" : ""}`}>
+        {(full ? rows : rows.slice(0, 3)).map((project, index) => (
+          <button
+            className="project-card"
+            key={project.id}
+            onClick={() => {
+              selectProject(project.id);
+              navigate("overview");
+            }}
+          >
+            <div
+              className={`project-art project-art-${index % 3}`}
+              aria-hidden="true"
+            >
+              <span>{project.project_type}</span>
+              <Building2 size={65} strokeWidth={0.8} />
+              <i />
+              <i />
+              <i />
+            </div>
+            <div className="project-card-body">
+              <span className="project-status">Actif</span>
+              <h3>{project.name}</h3>
+              <p>
+                <MapPin size={12} />
+                {project.city}
+              </p>
+              <strong className="project-budget">
+                {money(project.budget)} <small>HT</small>
+              </strong>
+              <div className="project-card-footer">
+                <span>
+                  {project.open_tasks} action{project.open_tasks > 1 ? "s" : ""}{" "}
+                  à traiter
+                </span>
+                <ArrowUpRight size={16} />
+              </div>
+            </div>
+          </button>
+        ))}
+        {!rows.length && (
+          <Empty
+            title="Aucun chantier trouvé"
+            text="Essayez un autre nom ou une autre ville."
+          />
+        )}
+      </div>
+    );
+  }
+
   function Overview() {
+    const controls = tasks.filter((task) =>
+      ["quality", "safety"].includes(task.kind),
+    );
+    const latestDiary = entries("diary").sort((a, b) =>
+      String(b.data.date).localeCompare(String(a.data.date)),
+    )[0];
     return (
       <>
         <section className="hero">
-          <div>
+          <div className="hero-copy">
             <span className="eyebrow">
-              <span className="live-dot" /> LE POINT CHANTIER
+              <span className="live-dot" /> VOTRE QUOTIDIEN, SIMPLIFIÉ
             </span>
             <h2>
-              Chaque décision compte.
+              Chaque chantier.
               <br />
-              <em>Faites avancer le terrain.</em>
+              Une longueur d’avance.
             </h2>
             <p>
-              Des responsabilités claires, des informations partagées.
-              <br />
-              Votre équipe sait où elle va.
+              Vos équipes, vos contrôles et vos décisions réunis. Gardez le cap,
+              du premier coup de pelle à la réception.
             </p>
             {canWrite && (
-              <button className="button" onClick={() => open("task")}>
-                <Plus size={16} />
-                Créer une action
+              <button className="button" onClick={() => open("diary")}>
+                <ClipboardList size={17} />
+                Rédiger le journal
                 <ArrowUpRight size={16} />
               </button>
             )}
           </div>
-          <div className="hero-art" aria-hidden="true">
-            <div className="art-orbit" />
-            <Building2 size={138} strokeWidth={0.65} />
-            <div className="art-note">
-              <CheckCircle2 size={18} />
+          <div className="hero-photo">
+            <img
+              src="/brand/terrain.png"
+              alt="Ingénieur devant un chantier de construction au Maroc — illustration"
+            />
+            <div>
+              <HardHat size={25} />
               <span>
-                L’équipe est connectée
-                <br />
-                <strong>Le chantier avance.</strong>
+                <strong>LE TERRAIN AU CENTRE</strong>
+                <small>Moins de dispersion. Plus de coordination.</small>
               </span>
             </div>
-            <span className="art-coordinate">BANYRA / TERRAIN</span>
           </div>
         </section>
         <div className="metrics">
           {[
             {
-              name: "Actions ouvertes",
+              name: "Chantiers actifs",
+              value: projects.length,
+              note: "dans votre portefeuille",
+              icon: Building2,
+              next: "projects",
+            },
+            {
+              name: "Actions à traiter",
               value: incomplete.length,
-              note: "à coordonner sur le terrain",
+              note: "sur le chantier sélectionné",
               icon: ClipboardList,
               next: "tasks",
             },
             {
-              name: "Échéances dépassées",
-              value: overdue.length,
-              note: "points à traiter en priorité",
-              icon: CalendarDays,
-              next: "tasks",
+              name: "Contrôles réalisés",
+              value: `${controls.filter((t) => t.status === "done").length}/${controls.length}`,
+              note: "qualité et sécurité",
+              icon: ShieldCheck,
+              next: "quality",
             },
             {
-              name: "Dépenses enregistrées HT",
+              name: "Dépenses engagées HT",
               value: money(workspace!.spent),
-              note: "sur ce chantier, en MAD",
+              note: "en dirhams marocains",
               icon: Wallet,
               next: "budget",
             },
-            {
-              name: "Membres du chantier",
-              value: members.length,
-              note: "une équipe, un même cap",
-              icon: Users,
-              next: "team",
-            },
           ].map(({ name, value, note, icon: Icon, next }) => (
             <button
-              className="metric"
+              className={`metric ${next === "budget" ? "metric-money" : ""}`}
               key={name}
               onClick={() => navigate(next)}
             >
@@ -919,53 +1008,116 @@ function App() {
           <section className="panel">
             <div className="section-heading">
               <div>
-                <h2>Les prochaines étapes</h2>
-                <p>Ce qui appelle votre attention.</p>
+                <h2>Vos chantiers en un regard</h2>
+                <p>Un point d’entrée unique pour chaque opération.</p>
               </div>
-              <button className="text-button" onClick={() => navigate("tasks")}>
+              <button
+                className="text-button"
+                onClick={() => navigate("projects")}
+              >
                 Tout voir
                 <ArrowRight size={14} />
               </button>
             </div>
-            {taskRows(
-              [...incomplete]
-                .sort((a, b) =>
-                  (a.due_date || "9999").localeCompare(b.due_date || "9999"),
-                )
-                .slice(0, 5),
+            <ProjectCards />
+          </section>
+          <section className="panel priorities">
+            <div className="section-heading">
+              <h2>Les prochaines étapes</h2>
+              <span className="badge">{incomplete.length}</span>
+            </div>
+            {[...incomplete]
+              .sort((a, b) =>
+                (a.due_date || "9999").localeCompare(b.due_date || "9999"),
+              )
+              .slice(0, 3)
+              .map((task) => (
+                <button
+                  key={task.id}
+                  className="priority-row"
+                  onClick={() => setDialog({ type: "task", task })}
+                >
+                  <i
+                    className={
+                      task.priority === "urgent" || task.priority === "high"
+                        ? "priority-alert"
+                        : ""
+                    }
+                  />
+                  <span>
+                    <strong>{task.title}</strong>
+                    <small>
+                      {dateLabel(task.due_date)} ·{" "}
+                      {members.find((m) => m.id === task.assignee_id)?.name ||
+                        "Non affecté"}
+                    </small>
+                  </span>
+                  <ArrowUpRight size={15} />
+                </button>
+              ))}
+            {!incomplete.length && (
+              <p className="form-note">
+                Toutes les actions du chantier sont terminées.
+              </p>
+            )}
+            {canWrite && (
+              <button
+                className="text-button new-priority"
+                onClick={() => open("task")}
+              >
+                <Plus size={16} />
+                Nouvelle action
+              </button>
             )}
           </section>
-          <section className="panel">
-            <div className="section-heading">
-              <div>
-                <h2>Le fil du chantier</h2>
-                <p>Les dernières contributions de votre équipe.</p>
-              </div>
-              <Activity size={19} />
-            </div>
-            <div className="timeline">
-              {workspace!.events.map((event, index) => (
-                <div key={index}>
-                  <span className="timeline-dot" />
-                  <div>
-                    <strong>{event.description}</strong>
-                    <small>
-                      {event.name} · {dateLabel(event.created_at)}
-                    </small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
+        <section className="panel field-focus">
+          <div className="section-heading">
+            <div>
+              <h2>Le point terrain</h2>
+              <p>Les dernières notes de votre chantier.</p>
+            </div>
+            <button className="text-button" onClick={() => navigate("diary")}>
+              Tout voir
+              <ArrowRight size={14} />
+            </button>
+          </div>
+          {latestDiary ? (
+            <div className="field-summary">
+              <span className="field-summary-date">
+                <CalendarDays size={24} />
+                <strong>{dateLabel(String(latestDiary.data.date))}</strong>
+              </span>
+              <div>
+                <h3>{workspace!.project.name}</h3>
+                <p>{latestDiary.data.notes}</p>
+                <small>
+                  {latestDiary.data.workforce} personnes ·{" "}
+                  {latestDiary.data.weather}
+                </small>
+              </div>
+              <button
+                className="text-button"
+                onClick={() => open("diary", latestDiary)}
+              >
+                Consulter
+                <ArrowUpRight size={15} />
+              </button>
+            </div>
+          ) : (
+            <Empty
+              title="Une journée à raconter"
+              text="Consignez les travaux réalisés, les effectifs et les points de vigilance."
+            />
+          )}
+        </section>
         <section className="project-banner">
           <div>
             <span className="eyebrow">CHANTIER SÉLECTIONNÉ</span>
             <h2>{workspace!.project.name}</h2>
             <p>
-              {workspace!.project.city || "Ville à renseigner"} ·{" "}
-              {workspace!.project.client || "Client à renseigner"} ·{" "}
-              {workspace!.project.reference || "Sans référence"}
+              {workspace!.project.city} · {workspace!.project.client} ·{" "}
+              {workspace!.project.reference}
             </p>
           </div>
           {isOwner && (
@@ -984,11 +1136,12 @@ function App() {
 
   function Content() {
     if (view === "overview") return <Overview />;
-    if (view === "tasks" || view === "quality") {
+    if (view === "projects") return <ProjectCards full />;
+    if (["tasks", "quality", "safety"].includes(view)) {
       const rows = tasks.filter(
         (task) =>
-          (view === "quality"
-            ? ["quality", "safety"].includes(task.kind)
+          (["quality", "safety"].includes(view)
+            ? task.kind === view
             : ["action", "reserve"].includes(task.kind)) &&
           (filter === "all" || task.status === filter) &&
           matches(`${task.title} ${task.trade} ${task.description}`),
@@ -1010,10 +1163,16 @@ function App() {
             {canWrite && (
               <button
                 className="button"
-                onClick={() => open(view === "quality" ? "quality" : "task")}
+                onClick={() =>
+                  open(["quality", "safety"].includes(view) ? view : "task")
+                }
               >
                 <Plus size={16} />
-                {view === "quality" ? "Nouveau contrôle" : "Nouvelle action"}
+                {view === "quality"
+                  ? "Nouveau contrôle"
+                  : view === "safety"
+                    ? "Signaler un risque"
+                    : "Nouvelle action"}
               </button>
             )}
           </div>
@@ -1480,6 +1639,23 @@ function App() {
               ),
             ]),
           )}
+          {!!workspace!.contacts.length && (
+            <div className="contact-directory">
+              <h3>Intervenants du projet</h3>
+              <p>
+                Annuaire de démonstration. Ces contacts fictifs ne possèdent
+                aucun accès au compte.
+              </p>
+              {table(
+                ["Nom", "Fonction", "Entreprise"],
+                workspace!.contacts.map((person) => [
+                  <strong>{person.name}</strong>,
+                  person.role,
+                  person.company,
+                ]),
+              )}
+            </div>
+          )}
         </section>
       );
   }
@@ -1495,24 +1671,31 @@ function App() {
         >
           <Brand />
         </button>
-        <span className="nav-caption">VOTRE ESPACE DE TRAVAIL</span>
+        <span className="nav-caption">ESPACE DE TRAVAIL</span>
         <nav>
           {nav.map(([key, label, Icon]) => (
             <button
               key={key}
               className={view === key ? "active" : ""}
               onClick={() => navigate(key)}
+              aria-label={label}
+              aria-current={view === key ? "page" : undefined}
             >
               <Icon size={19} />
               <span>{label}</span>
+              {key === "tasks" && incomplete.length > 0 && (
+                <b className="nav-count">{incomplete.length}</b>
+              )}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-note">
             <HardHat size={22} />
-            <strong>Le chantier, ensemble.</strong>
-            <p>Un point clair. Des actions concrètes. Toute l’équipe avance.</p>
+            <strong>Un chantier bien piloté</strong>
+            <p>
+              Un point quotidien. Des actions claires. Une équipe qui avance.
+            </p>
           </div>
           <button
             className="account-button"
@@ -1563,16 +1746,26 @@ function App() {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
+                  timeZone: "Africa/Casablanca",
                 }).format(new Date())}
               </span>
               <h1>{nav.find((item) => item[0] === view)?.[1]}</h1>
               <p>
                 {view === "overview"
-                  ? "Gardez le cap, du premier jour à la réception."
+                  ? "Gardez une longueur d’avance."
                   : "Les informations utiles, partagées avec les bonnes personnes."}
               </p>
             </div>
             <div className="heading-actions">
+              {view === "projects" && !projects.some((p) => p.is_demo) && (
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() => void createDemo()}
+                >
+                  Exemples marocains
+                </button>
+              )}
               <button
                 className="icon-button"
                 title="Actualiser"
@@ -1587,8 +1780,9 @@ function App() {
                 <RefreshCw size={18} className={loading ? "spin" : ""} />
               </button>
               <button
-                className="button secondary"
+                className="button primary"
                 onClick={() => open("project")}
+                disabled={!projectsReady}
               >
                 <Plus size={16} />
                 Nouveau chantier
@@ -1625,13 +1819,26 @@ function App() {
               consultables ; reconnectez-vous pour enregistrer.
             </p>
           )}
+          {!!workspace?.project.is_demo && (
+            <div className="demo-banner">
+              <span className="demo-tag">DÉMONSTRATION</span>
+              <p>
+                Exemples marocains · données fictives enregistrées · montants en
+                MAD
+              </p>
+              <button onClick={() => open("project")}>
+                Créer mon chantier
+                <ArrowUpRight size={14} />
+              </button>
+            </div>
+          )}
           <div className="workspace-toolbar">
             <div className="project-select">
               <Building2 size={17} />
               <select
                 aria-label="Chantier"
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
+                onChange={(e) => selectProject(e.target.value)}
               >
                 <option value="">Sélectionner un chantier</option>
                 {projects.map((p) => (
@@ -1658,7 +1865,7 @@ function App() {
               </button>
             )}
           </div>
-          {loading && !workspace ? (
+          {(!projectsReady || loading) && !workspace ? (
             <div className="loading">
               <LoaderCircle className="spin" />
               Chargement du chantier…
@@ -1699,7 +1906,7 @@ function App() {
             </section>
           )}
           <footer className="page-footer">
-            <span>Banyra · Le terrain, en confiance.</span>
+            <span>Banyra · Vos chantiers, en mouvement.</span>
             <span>Vos chantiers · Vos équipes · Vos décisions</span>
           </footer>
         </main>
@@ -1716,6 +1923,7 @@ function App() {
             setError("");
           }}
           save={mutate}
+          onProjectCreated={selectProject}
         />
       )}
     </div>
@@ -1730,6 +1938,7 @@ function DialogContent({
   canWrite,
   close,
   save,
+  onProjectCreated,
 }: {
   dialog: Dialog;
   workspace: Workspace | null;
@@ -1738,14 +1947,22 @@ function DialogContent({
   canWrite: boolean;
   close: () => void;
   save: (operation: () => Promise<unknown>, close?: boolean) => Promise<void>;
+  onProjectCreated: (id: string) => void;
 }) {
   const [kind, setKind] = useState(
-    dialog.task?.kind ?? (dialog.type === "quality" ? "quality" : "action"),
+    dialog.task?.kind ??
+      (dialog.type === "safety"
+        ? "safety"
+        : dialog.type === "quality"
+          ? "quality"
+          : "action"),
   );
   const [checks, setChecks] = useState(
     dialog.task?.checks ??
-      (dialog.type === "quality"
-        ? defaultChecks.map((label) => ({ label, done: false }))
+      (["quality", "safety"].includes(dialog.type)
+        ? (dialog.type === "safety" ? safetyChecks : defaultChecks).map(
+            (label) => ({ label, done: false }),
+          )
         : []),
   );
   const [invitePath, setInvitePath] = useState("");
@@ -1759,26 +1976,27 @@ function DialogContent({
     const result = entry?.data[key];
     return Array.isArray(result) ? fallback : (result ?? fallback);
   };
-  const title =
-    dialog.type === "task" || dialog.type === "quality"
-      ? dialog.task
-        ? "Suivi du terrain"
+  const title = ["task", "quality", "safety"].includes(dialog.type)
+    ? dialog.task
+      ? "Suivi du terrain"
+      : dialog.type === "safety"
+        ? "Signaler un risque"
         : dialog.type === "quality"
           ? "Nouveau contrôle"
           : "Nouvelle action ou réserve"
-      : dialog.type === "project"
-        ? "Nouveau chantier"
-        : dialog.type === "project-settings"
-          ? "Paramètres du chantier"
-          : dialog.type === "upload"
-            ? "Déposer un document"
-            : dialog.type === "invite"
-              ? "Inviter une personne"
-              : dialog.type === "file"
-                ? dialog.file!.label
-                : dialog.type === "report"
-                  ? "Rapport du chantier"
-                  : entryNames[dialog.type];
+    : dialog.type === "project"
+      ? "Nouveau chantier"
+      : dialog.type === "project-settings"
+        ? "Paramètres du chantier"
+        : dialog.type === "upload"
+          ? "Déposer un document"
+          : dialog.type === "invite"
+            ? "Inviter une personne"
+            : dialog.type === "file"
+              ? dialog.file!.label
+              : dialog.type === "report"
+                ? "Rapport du chantier"
+                : entryNames[dialog.type];
   const text = (
     name: string,
     label: string,
@@ -1841,15 +2059,16 @@ function DialogContent({
           end_date: values.end_date || null,
           vat: workspace?.project.vat ?? "0",
         };
-        const result = await api(
+        const result = await api<{ id: string }>(
           "/projects" +
             (dialog.type === "project-settings" ? `/${projectId}` : ""),
           dialog.type === "project" ? "POST" : "PUT",
           projectValues,
         );
+        if (dialog.type === "project") onProjectCreated(result.id);
         return result;
       }
-      if (dialog.type === "task" || dialog.type === "quality") {
+      if (["task", "quality", "safety"].includes(dialog.type)) {
         const body = {
           ...values,
           assignee_id: values.assignee_id || null,
@@ -2113,7 +2332,7 @@ function DialogContent({
               })}
             </>
           )}
-          {(dialog.type === "task" || dialog.type === "quality") && (
+          {["task", "quality", "safety"].includes(dialog.type) && (
             <>
               <Field label="Type de suivi">
                 <select
@@ -2132,7 +2351,7 @@ function DialogContent({
                     );
                   }}
                 >
-                  {(dialog.type === "quality"
+                  {(["quality", "safety"].includes(dialog.type)
                     ? ["quality", "safety"]
                     : dialog.task
                       ? [dialog.task.kind]

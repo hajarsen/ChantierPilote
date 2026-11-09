@@ -12,6 +12,9 @@ async function register(page: Page, email = `hajar-${stamp()}@example.ma`) {
   await expect(
     page.getByRole("button", { name: "Nouveau chantier", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Vos chantiers en un regard" }),
+  ).toBeVisible();
   return email;
 }
 async function createProject(page: Page) {
@@ -30,9 +33,9 @@ async function createProject(page: Page) {
     .getByRole("button", { name: "Enregistrer", exact: true })
     .click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByLabel("Chantier", { exact: true })).not.toHaveValue(
-    "",
-  );
+  await expect(
+    page.getByLabel("Chantier", { exact: true }).locator("option:checked"),
+  ).toHaveText("Résidence Les Oliviers");
   await expect(
     page.getByRole("heading", { name: "Les prochaines étapes" }),
   ).toBeVisible();
@@ -42,6 +45,67 @@ const nav = (page: Page, name: string) =>
     .locator(".sidebar nav")
     .getByRole("button", { name, exact: true })
     .click();
+
+test("Moroccan portfolio opens populated, persists and uses the Banyra visual identity", async ({
+  page,
+}) => {
+  await register(page);
+  await expect(page.locator(".project-card")).toHaveCount(3);
+  await expect(page.locator(".demo-banner")).toContainText("DÉMONSTRATION");
+  await expect(
+    page.locator(".project-card").filter({ hasText: "Rabat" }),
+  ).toContainText(/18[.\s]500[.\s]000,00/);
+  await expect(page.locator(".hero-photo img")).toBeVisible();
+  expect(
+    await page
+      .locator(".hero-photo img")
+      .evaluate(
+        (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+      ),
+  ).toBe(true);
+  expect(
+    await page
+      .locator(".brand")
+      .first()
+      .evaluate((el) => getComputedStyle(el).fontFamily),
+  ).toContain("Plus Jakarta Sans");
+  await page.screenshot({
+    path: "test-results/banyra-populated-desktop.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await nav(page, "Budget & coûts");
+  await expect(
+    page.getByText("Béton prêt à l’emploi C30/37", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".metrics.three")).toContainText(/341[.\s]400,00/);
+  await page.reload();
+  await expect(page.locator(".project-card")).toHaveCount(3);
+  await nav(page, "Équipe du chantier");
+  await expect(
+    page.getByText("Salma El Idrissi", { exact: true }),
+  ).toBeVisible();
+  await nav(page, "Sécurité");
+  await page
+    .getByRole("button", { name: "Signaler un risque", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByLabel("Type de suivi"),
+  ).toHaveValue("safety");
+  await page.getByRole("button", { name: "Fermer", exact: true }).click();
+  await nav(page, "Vue d’ensemble");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/banyra-populated-mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+});
 
 test("a delayed response from a signed-out account cannot populate the next account", async ({
   page,
@@ -81,7 +145,7 @@ test("a delayed response from a signed-out account cannot populate the next acco
     .fill("Banyra-Test-2026");
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(
-    page.getByRole("heading", { name: "Votre prochain chantier commence ici" }),
+    page.getByRole("heading", { name: "Vos chantiers en un regard" }),
   ).toBeVisible();
   const responseReceived = page.waitForResponse(
     (response) =>
@@ -92,7 +156,7 @@ test("a delayed response from a signed-out account cannot populate the next acco
   await responseReceived;
   await expect(
     page.getByLabel("Chantier", { exact: true }).getByRole("option"),
-  ).toHaveCount(1);
+  ).toHaveCount(4);
   await expect(
     page.getByText("Résidence Les Oliviers", { exact: true }),
   ).toHaveCount(0);
@@ -105,7 +169,7 @@ test("independent account, project, reserve with photo and quality closure persi
   page.on("pageerror", (error) => errors.push(error.message));
   await register(page);
   await createProject(page);
-  await nav(page, "Actions & réserves");
+  await nav(page, "Actions terrain");
   await page
     .getByRole("button", { name: "Nouvelle action", exact: true })
     .click();
@@ -139,11 +203,11 @@ test("independent account, project, reserve with photo and quality closure persi
   await expect(dialog.getByRole("link", { name: "reserve.png" })).toBeVisible();
   await dialog.getByRole("button", { name: "Fermer", exact: true }).click();
   await page.reload();
-  await nav(page, "Actions & réserves");
+  await nav(page, "Actions terrain");
   await expect(
     page.getByRole("button", { name: /Fissure à reprendre/ }),
   ).toBeVisible();
-  await nav(page, "Qualité & sécurité");
+  await nav(page, "Contrôles qualité");
   await page
     .getByRole("button", { name: "Nouveau contrôle", exact: true })
     .click();
@@ -200,7 +264,7 @@ test("journal, budget, market and purchasing run through the own API", async ({
       exact: true,
     }),
   ).toBeVisible();
-  await nav(page, "Budget & dépenses");
+  await nav(page, "Budget & coûts");
   await page.getByRole("button", { name: "Ajouter une dépense" }).click();
   await page.getByLabel("Désignation", { exact: true }).fill("Béton B25");
   await page.getByLabel("Montant HT (MAD)", { exact: true }).fill("12500.50");
@@ -232,7 +296,7 @@ test("journal, budget, market and purchasing run through the own API", async ({
     .getByRole("button", { name: "Marquer réglée", exact: true })
     .click();
   await expect(page.getByText("Réglée", { exact: true })).toBeVisible();
-  await nav(page, "Approvisionnements");
+  await nav(page, "Achats & livraisons");
   await page.getByRole("button", { name: "Préparer une commande" }).click();
   await page.getByLabel("Désignation des fournitures").fill("Parpaings");
   await page
@@ -272,7 +336,7 @@ test("a second account joins only by invitation and viewer role prevents changes
     await register(second, email);
     await expect(
       second.getByRole("heading", {
-        name: "Votre prochain chantier commence ici",
+        name: "Vos chantiers en un regard",
       }),
     ).toBeVisible();
     await second.goto(link);
@@ -280,7 +344,7 @@ test("a second account joins only by invitation and viewer role prevents changes
     await expect(
       second.getByRole("heading", { name: "Les prochaines étapes" }),
     ).toBeVisible();
-    await nav(second, "Actions & réserves");
+    await nav(second, "Actions terrain");
     await expect(
       second.getByRole("button", { name: "Nouvelle action", exact: true }),
     ).toHaveCount(0);

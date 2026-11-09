@@ -17,6 +17,8 @@ export type Project = {
   engineering_office: string;
   contractor: string;
   site_manager: string;
+  is_demo: number;
+  open_tasks: number;
   role: "owner" | "member" | "viewer";
 };
 export type Check = { label: string; done: boolean };
@@ -57,6 +59,7 @@ export type Workspace = {
   tasks: Task[];
   entries: Entry[];
   members: Member[];
+  contacts: { id: string; name: string; role: string; company: string }[];
   files: Document[];
   events: { description: string; name: string; created_at: string }[];
   spent: string;

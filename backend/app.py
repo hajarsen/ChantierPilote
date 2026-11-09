@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
 from .database import connect, initialize
+from .demo import seed_portfolio
 from .models import AcceptInvite, Credentials, ENTRY_MODELS, EntryInput, EntryPatch, Invitation, ProjectInput, Registration, TaskInput, TaskPatch
 
 COOKIE = "banyra_session"
@@ -204,7 +205,10 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
 
     @app.get("/api/projects")
     def projects(actor=Depends(user), connection=Depends(db)):
-        return [dict(row) for row in connection.execute("SELECT p.*,m.role FROM projects p JOIN members m ON p.id=m.project_id WHERE m.user_id=? ORDER BY p.created_at DESC", (actor["id"],))]
+        return [dict(row) for row in connection.execute("""SELECT p.*,m.role,
+            (SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id AND t.status!='done') AS open_tasks
+            FROM projects p JOIN members m ON p.id=m.project_id WHERE m.user_id=?
+            ORDER BY p.is_demo ASC,p.created_at DESC""", (actor["id"],))]
 
     @app.post("/api/projects", status_code=201)
     def create_project(data: ProjectInput, actor=Depends(user), connection=Depends(db)):
@@ -219,36 +223,18 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
 
     @app.post("/api/demo", status_code=201)
     def create_demo(actor=Depends(user), connection=Depends(db)):
-        """Create an explicitly labelled Moroccan sample workspace for evaluation."""
-        project_id = uid()
-        created = now()
-        connection.execute("""INSERT INTO projects
-            (id,name,reference,city,client,budget,vat,start_date,owner_id,created_at,end_date,address,province,project_type,area,architect,engineering_office,contractor,site_manager)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (project_id, "Résidence Al Manar — Démonstration", "MCH-2026-014", "Rabat", "Atlas Immobilier (donnée exemple)", "18500000.00", "0", "2026-09-01", actor["id"], created, "2028-02-29", "Avenue Annakhil, Hay Riad", "Rabat", "Logement", "12400.00", "Salma El Idrissi (exemple)", "BET Al Omrane Conseil (exemple)", "Bâtir Maroc (exemple)", actor["name"]))
-        connection.execute("INSERT INTO members VALUES(?,?,?)", (project_id, actor["id"], "owner"))
-        tasks = [
-            ("Contrôler le ferraillage du voile V12", "quality", "Gros œuvre", "urgent", "2026-11-10"),
-            ("Réserve d’étanchéité en terrasse bloc B", "reserve", "Étanchéité", "high", "2026-11-12"),
-            ("Valider les attentes électriques du niveau R+2", "action", "Électricité", "normal", "2026-11-14"),
-        ]
-        demo_task_ids = []
-        for title, kind, trade, priority, due in tasks:
-            task_id = uid()
-            demo_task_ids.append(task_id)
-            checks = [{"label": item, "done": False} for item in ("Plan applicable vérifié", "Mise en œuvre contrôlée", "Photos et écarts consignés")] if kind == "quality" else []
-            connection.execute("INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (task_id, project_id, title, "Donnée de démonstration à adapter au chantier réel.", kind, trade, actor["id"], due, "open", priority, json.dumps(checks), 1, actor["id"], created))
-        samples = [
-            ("diary", {"date": "2026-11-09", "workforce": 42, "weather": "Ensoleillé, vent faible", "temperature": "18–25 °C", "workforce_detail": "Bâtir Maroc : 18 ouvriers gros œuvre\nÉlec Atlas : 6 électriciens\nPlomb Maroc : 4 plombiers\nEncadrement et autres équipes : 14 personnes", "work_zones": "Bloc A R+2 · Bloc B terrasse", "notes": "Coulage de la dalle du bloc A terminé à 15 h 30. Pose des relevés d’étanchéité du bloc B en cours.", "equipment": "Grue à tour GT-01 · Pompe à béton · 2 nacelles", "deliveries": "72 m³ béton C30/37 — BL 4581 à 4587 — conforme", "quality": "Éprouvettes béton prélevées par le laboratoire. Ferraillage visé avant coulage.", "safety": "Causerie travail en hauteur. Garde-corps du bloc B remis en conformité.", "incidents": "Néant", "visitors": "Salma El Idrissi — architecte (exemple)", "decisions": "Reprendre deux réservations techniques avant le 11/11.", "blockers": "Livraison menuiserie aluminium décalée de 2 jours.", "next_day": "Décoffrage zone A2 · Réception étanchéité terrasse · Implantation cloisons R+1", "task_ids": demo_task_ids[:2]}),
-            ("expense", {"title": "Location pompe à béton", "amount": "4800.00", "category": "Matériel", "supplier": "Loca BTP Maroc (exemple)", "date": "2026-11-09"}),
-            ("contract", {"title": "Lot étanchéité", "partner": "Étanche Maroc (exemple)", "reference": "ST-ET-003", "amount": "780000.00", "retention": "10", "payment_days": 60}),
-            ("supply", {"title": "Ciment CPJ 45", "supplier": "Matériaux du Centre (exemple)", "quantity": "120", "unit_price": "92.50", "delivery": "2026-11-13", "status": "draft", "amount": "11100.00"}),
-            ("meeting", {"title": "Réunion hebdomadaire de chantier", "date": "2026-11-07", "participants": "Maître d’ouvrage, architecte, BET, entreprise", "notes": "Priorité à la levée des réserves du bloc B et à la préparation du planning à trois semaines."}),
-        ]
-        for kind, data in samples:
-            connection.execute("INSERT INTO entries VALUES(?,?,?,?,?,?,?)", (uid(), project_id, kind, json.dumps(data), 1, actor["id"], created))
-        audit(connection, project_id, actor["id"], "Chantier de démonstration marocain créé")
-        return {"id": project_id}
+        connection.execute("BEGIN IMMEDIATE")
+        ids = seed_portfolio(connection, actor)
+        return {"id": ids[0] if ids else "", "ids": ids}
+
+    @app.post("/api/demo/bootstrap")
+    def bootstrap_demo(actor=Depends(user), connection=Depends(db)):
+        connection.execute("BEGIN IMMEDIATE")
+        if connection.execute("""SELECT 1 FROM members m JOIN projects p ON p.id=m.project_id
+            WHERE m.user_id=? AND p.name NOT LIKE '% — Démonstration'""", (actor["id"],)).fetchone():
+            return {"created": False}
+        ids = seed_portfolio(connection, actor)
+        return {"created": bool(ids), "ids": ids}
 
     @app.put("/api/projects/{project_id}")
     def edit_project(project_id: str, data: ProjectInput, actor=Depends(user), connection=Depends(db)):
@@ -269,6 +255,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"project": project, "tasks": tasks, "entries": entries,
             "spent": money(spent), "remaining": money(Decimal(project["budget"]) - spent),
             "members": [dict(row) for row in connection.execute("SELECT u.id,u.name,u.email,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.project_id=? ORDER BY u.name", (project_id,))],
+            "contacts": [dict(row) for row in connection.execute("SELECT * FROM contacts WHERE project_id=? ORDER BY name", (project_id,))],
             "files": [dict(row) for row in connection.execute("SELECT * FROM files WHERE project_id=? ORDER BY created_at DESC", (project_id,))],
             "events": [dict(row) for row in connection.execute("SELECT e.description,e.created_at,u.name FROM events e JOIN users u ON u.id=e.user_id WHERE project_id=? ORDER BY e.id DESC LIMIT 25", (project_id,))]}
 
@@ -462,13 +449,15 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
     frontend_dir = frontend_dir or Path(__file__).resolve().parents[1] / "frontend" / "dist"
     if frontend_dir.is_dir():
         app.mount("/assets", StaticFiles(directory=frontend_dir / "assets"), name="assets")
+        if (frontend_dir / "brand").is_dir():
+            app.mount("/brand", StaticFiles(directory=frontend_dir / "brand"), name="brand")
 
         @app.get("/{path:path}")
         def index(path: str):
             if path == "api" or path.startswith("api/"):
                 fail(404, "Route inconnue.")
-            if path == "third-party.txt":
-                return FileResponse(frontend_dir / "third-party.txt", media_type="text/plain")
+            if path in {"third-party.txt", "plus-jakarta-sans-license.txt"}:
+                return FileResponse(frontend_dir / path, media_type="text/plain")
             return FileResponse(frontend_dir / "index.html", headers={"Cache-Control": "no-cache"})
 
     return app

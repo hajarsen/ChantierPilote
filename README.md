@@ -16,9 +16,24 @@ python3 run.py
 ```
 
 Ouvrez **http://localhost:8010** et créez votre compte. Gardez le terminal ouvert.
-Les données commencent vides : créez un chantier, puis invitez votre équipe. Pour
-évaluer rapidement l’interface, le bouton « Charger un exemple marocain » crée un
-jeu de données fictif, clairement identifié comme démonstration.
+À la première ouverture d’un compte vide, trois chantiers de démonstration sont
+automatiquement enregistrés dans la base : Résidence Al Manar à Rabat, Groupe
+scolaire Les Oliviers à Casablanca et Hôtel Jardin de l’Atlas à Marrakech. Vous
+voyez immédiatement budgets et dépenses en MAD, tâches, contrôles, journaux,
+situations, commandes et intervenants marocains fictifs. Le bandeau
+« Démonstration » identifie ces exemples ; ils restent après une reconnexion
+et ne sont pas recréés à chaque actualisation. Les comptes disposant de vrais
+chantiers et les destinataires d’une invitation conservent leur parcours.
+Les comptes utilisant l’ancien exemple unique gardent également leurs données.
+Dans « Mes chantiers », le bouton « Exemples marocains » permet de charger le
+portefeuille si aucun nouvel exemple n’est présent. Créez vos propres chantiers
+avec « Nouveau chantier » : leurs formulaires restent vides et vos données sont
+séparées des exemples. Les contacts fictifs du projet ne sont pas des comptes
+connectables et n’obtiennent aucun accès à votre espace.
+
+La base persistante est `data/banyra.sqlite3` ; elle est créée et mise à jour
+automatiquement au démarrage. Aucun serveur de base de données supplémentaire
+n’est à installer.
 Ce port est volontairement différent des anciennes versions de l’application.
 
 Après une mise à jour : `python3 run.py --build`.
