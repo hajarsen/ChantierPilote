@@ -95,6 +95,14 @@ test("GLB upload is parsed, indexed and persists as a separate model", async ({
   );
   await page.getByRole("checkbox", { name: /Sélectionner Dalle/ }).check();
   await expect(page.locator(".bim-properties")).toContainText("GLB");
+  await expect(
+    page.getByRole("button", { name: "Lier au planning" }),
+  ).toHaveCount(0);
+  await expect(page.locator(".bim-planning, .bim-simulation")).toHaveCount(0);
+  await page
+    .locator(".sidebar nav")
+    .getByRole("button", { name: "Planning · 4D", exact: true })
+    .click();
   await page.getByRole("button", { name: "Lier au planning" }).click();
   await expect(
     page.getByRole("dialog").getByText("Éléments 3D liés (1)"),
@@ -145,6 +153,22 @@ test("real IFC geometry, selection, 4D and persistent planning work inside Banyr
     .check();
   await expect(page.locator(".bim-properties")).toContainText("GlobalId");
   await expect(page.locator(".bim-properties")).toContainText("Dalle niveau 0");
+  await expect(
+    page.getByRole("heading", { name: "Planning des travaux" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Simulation 4D du planning",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Ajouter une tâche au planning" }),
+  ).toHaveCount(0);
+  await page
+    .locator(".sidebar nav")
+    .getByRole("button", { name: "Planning · 4D", exact: true })
+    .click();
   await page.getByRole("button", { name: "Lier au planning" }).click();
   let dialog = page.getByRole("dialog");
   await dialog
@@ -170,6 +194,21 @@ test("real IFC geometry, selection, 4D and persistent planning work inside Banyr
     .click();
   await page.screenshot({
     path: "test-results/banyra-bim-4d.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page
+    .locator(".sidebar nav")
+    .getByRole("button", { name: "Maquette BIM · 3D", exact: true })
+    .click();
+  await expect(page.locator(".bim-planning, .bim-simulation")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Actualiser la maquette" }),
+  ).toBeVisible();
+  await expect(canvas).toHaveAttribute("data-element-count", "30");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: "test-results/banyra-bim-3d.png",
     fullPage: true,
     animations: "disabled",
   });

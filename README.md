@@ -89,7 +89,12 @@ import est conservé séparément ; les tâches restent liées à leur fichier d
 Les identifiants IFC appartiennent à cette version du fichier ; les changements
 entre révisions et le transfert automatique des liens ne sont pas implémentés.
 
-Cliquez un objet ou cochez plusieurs éléments, puis **Lier au planning**. Vous
+La page **Maquette BIM · 3D** est consacrée à la consultation, aux propriétés
+et aux filtres de la maquette. Le Gantt, les commandes de tâches et la simulation
+sont disponibles uniquement dans **Planning · 4D**. La sélection d’objets est
+conservée lorsque vous passez de la 3D à la 4D.
+
+Dans **Planning · 4D**, cliquez un objet ou cochez plusieurs éléments, puis **Lier au planning**. Vous
 pouvez aussi créer une tâche sans maquette. Saisissez les dates, le responsable,
 l’avancement réel et les prédécesseurs. Un successeur doit commencer le lendemain
 de la fin de ses prédécesseurs ou plus tard. Les modifications incompatibles sont

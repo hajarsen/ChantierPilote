@@ -184,7 +184,7 @@ export default function BimPage({ project, mode }: Props) {
       selected,
       categories,
       isolate,
-      simulation,
+      simulation: mode === "planning" && simulation,
       date,
       tasks,
     });
@@ -196,6 +196,7 @@ export default function BimPage({ project, mode }: Props) {
     date,
     data.schedule,
     viewerReady,
+    mode,
   ]);
   useEffect(() => {
     let current = true;
@@ -256,15 +257,20 @@ export default function BimPage({ project, mode }: Props) {
         <>
           <section className="panel bim-intro">
             <div>
-              <span className="eyebrow">BIM · COORDINATION · AVANCEMENT</span>
+              <span className="eyebrow">
+                {mode === "planning"
+                  ? "BIM · COORDINATION · AVANCEMENT"
+                  : "BIM · MAQUETTE · PROPRIÉTÉS"}
+              </span>
               <h2>
                 {mode === "planning"
                   ? "Le planning de votre chantier"
                   : "Votre bâtiment, sous tous les angles"}
               </h2>
               <p>
-                Maquettes privées du chantier · IFC / GLB · sélection et
-                propriétés · planning lié aux éléments.
+                {mode === "planning"
+                  ? "Dates prévues, avancement réel et planning lié aux éléments de la maquette."
+                  : "Maquettes privées du chantier · IFC / GLB · sélection et propriétés."}
               </p>
             </div>
             <div className="bim-intro-actions">
@@ -274,7 +280,9 @@ export default function BimPage({ project, mode }: Props) {
                 onClick={() => void load().catch((e) => setError(e.message))}
               >
                 <RefreshCw size={15} />
-                Actualiser le planning
+                {mode === "planning"
+                  ? "Actualiser le planning"
+                  : "Actualiser la maquette"}
               </button>
               {canWrite && (
                 <div className="bim-intro-actions">
@@ -288,14 +296,16 @@ export default function BimPage({ project, mode }: Props) {
                     <Box size={16} />
                     Maquette exemple R+2
                   </button>
-                  <button
-                    className="button"
-                    disabled={busy}
-                    onClick={() => setEditor("new")}
-                  >
-                    <Plus size={16} />
-                    Ajouter une tâche au planning
-                  </button>
+                  {mode === "planning" && (
+                    <button
+                      className="button"
+                      disabled={busy}
+                      onClick={() => setEditor("new")}
+                    >
+                      <Plus size={16} />
+                      Ajouter une tâche au planning
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -351,8 +361,9 @@ export default function BimPage({ project, mode }: Props) {
                 </select>
               </label>
               <small>
-                Chaque import conserve son propre fichier et ses liaisons au
-                planning.
+                {mode === "planning"
+                  ? "Chaque import conserve son propre fichier et ses liaisons au planning."
+                  : "Chaque import conserve sa propre maquette et ses propriétés."}
               </small>
             </div>
           )}
@@ -491,7 +502,7 @@ export default function BimPage({ project, mode }: Props) {
                           premier élément.
                         </p>
                       )}
-                      {canWrite && (
+                      {canWrite && mode === "planning" && (
                         <button
                           className="button"
                           disabled={!viewerReady}
@@ -510,52 +521,54 @@ export default function BimPage({ project, mode }: Props) {
                   )}
                 </aside>
               </div>
-              <div className="bim-simulation">
-                <label>
+              {mode === "planning" && (
+                <div className="bim-simulation">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={simulation}
+                      onChange={(e) => setSimulation(e.target.checked)}
+                    />
+                    Simulation 4D du planning
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={simulation}
-                    onChange={(e) => setSimulation(e.target.checked)}
+                    type="date"
+                    aria-label="Date de simulation 4D"
+                    value={date}
+                    onChange={(e) => e.target.value && setDate(e.target.value)}
                   />
-                  Simulation 4D du planning
-                </label>
-                <input
-                  type="date"
-                  aria-label="Date de simulation 4D"
-                  value={date}
-                  onChange={(e) => e.target.value && setDate(e.target.value)}
-                />
-                <input
-                  type="range"
-                  aria-label="Parcourir le planning 4D"
-                  min={dateNumber(rangeStart)}
-                  max={Math.max(
-                    dateNumber(rangeEnd),
-                    dateNumber(rangeStart) + 1,
-                  )}
-                  value={Math.min(
-                    Math.max(dateNumber(date), dateNumber(rangeStart)),
-                    dateNumber(rangeEnd),
-                  )}
-                  onChange={(e) =>
-                    setDate(
-                      new Date(Number(e.target.value) * 86400000)
-                        .toISOString()
-                        .slice(0, 10),
-                    )
-                  }
-                />
-                <div className="bim-legend">
-                  <span className="planned">À venir</span>
-                  <span className="working">Prévu en cours</span>
-                  <span className="finished">Prévu terminé</span>
-                  <span className="unlinked">Non lié</span>
+                  <input
+                    type="range"
+                    aria-label="Parcourir le planning 4D"
+                    min={dateNumber(rangeStart)}
+                    max={Math.max(
+                      dateNumber(rangeEnd),
+                      dateNumber(rangeStart) + 1,
+                    )}
+                    value={Math.min(
+                      Math.max(dateNumber(date), dateNumber(rangeStart)),
+                      dateNumber(rangeEnd),
+                    )}
+                    onChange={(e) =>
+                      setDate(
+                        new Date(Number(e.target.value) * 86400000)
+                          .toISOString()
+                          .slice(0, 10),
+                      )
+                    }
+                  />
+                  <div className="bim-legend">
+                    <span className="planned">À venir</span>
+                    <span className="working">Prévu en cours</span>
+                    <span className="finished">Prévu terminé</span>
+                    <span className="unlinked">Non lié</span>
+                  </div>
+                  <small>
+                    Simulation selon les dates prévues. L’avancement réel est
+                    saisi dans le planning.
+                  </small>
                 </div>
-                <small>
-                  Simulation selon les dates prévues. L’avancement réel est
-                  saisi dans le planning.
-                </small>
-              </div>
+              )}
             </section>
           ) : (
             <section className="panel bim-empty">
@@ -563,37 +576,39 @@ export default function BimPage({ project, mode }: Props) {
               <h3>Aucune maquette sur ce chantier</h3>
               <p>
                 {canWrite
-                  ? "Importez votre fichier IFC/GLB ou chargez le bâtiment exemple pour découvrir la 3D et la 4D."
+                  ? "Importez votre fichier IFC/GLB ou chargez le bâtiment exemple pour découvrir la maquette."
                   : "Un membre de l’équipe peut importer la maquette du chantier."}
               </p>
             </section>
           )}
-          <section className="panel bim-planning">
-            <div className="section-heading">
-              <div>
-                <h2>Planning des travaux</h2>
-                <p>
-                  Dates prévues, dépendances et avancement réel.{" "}
-                  {data.schedule.length} tâche
-                  {data.schedule.length > 1 ? "s" : ""} enregistrée
-                  {data.schedule.length > 1 ? "s" : ""}.
-                </p>
+          {mode === "planning" && (
+            <section className="panel bim-planning">
+              <div className="section-heading">
+                <div>
+                  <h2>Planning des travaux</h2>
+                  <p>
+                    Dates prévues, dépendances et avancement réel.{" "}
+                    {data.schedule.length} tâche
+                    {data.schedule.length > 1 ? "s" : ""} enregistrée
+                    {data.schedule.length > 1 ? "s" : ""}.
+                  </p>
+                </div>
+                {canWrite && (
+                  <button
+                    className="text-button"
+                    onClick={() => setEditor("new")}
+                  >
+                    <Plus size={16} />
+                    Nouvelle tâche
+                  </button>
+                )}
               </div>
-              {canWrite && (
-                <button
-                  className="text-button"
-                  onClick={() => setEditor("new")}
-                >
-                  <Plus size={16} />
-                  Nouvelle tâche
-                </button>
-              )}
-            </div>
-            <Gantt tasks={data.schedule} edit={(task) => setEditor(task)} />
-          </section>
+              <Gantt tasks={data.schedule} edit={(task) => setEditor(task)} />
+            </section>
+          )}
         </>
       )}
-      {editor && (
+      {mode === "planning" && editor && (
         <ScheduleEditor
           task={editor === "new" ? undefined : editor}
           data={data}
