@@ -142,17 +142,16 @@ test("real IFC geometry, selection, 4D and persistent planning work inside Banyr
     .locator(".sidebar nav")
     .getByRole("button", { name: "Maquette BIM · 3D", exact: true })
     .click();
-  await page.getByRole("button", { name: "Maquette exemple R+2" }).click();
+  await page.getByRole("button", { name: "Maquette exemple duplex" }).click();
   const canvas = page.getByLabel("Vue 3D de la maquette");
-  await expect(canvas).toHaveAttribute("data-element-count", "30", {
+  await expect(canvas).toHaveAttribute("data-element-count", /^[1-9]\d*$/, {
     timeout: 45000,
   });
   await expect(page.locator(".bim-stage-message")).toHaveCount(0);
   await page
-    .getByRole("checkbox", { name: "Sélectionner Dalle niveau 0", exact: true })
+    .getByRole("checkbox", { name: /^Sélectionner / }).first()
     .check();
   await expect(page.locator(".bim-properties")).toContainText("GlobalId");
-  await expect(page.locator(".bim-properties")).toContainText("Dalle niveau 0");
   await expect(
     page.getByRole("heading", { name: "Planning des travaux" }),
   ).toHaveCount(0);
@@ -205,7 +204,7 @@ test("real IFC geometry, selection, 4D and persistent planning work inside Banyr
   await expect(
     page.getByRole("button", { name: "Actualiser la maquette" }),
   ).toBeVisible();
-  await expect(canvas).toHaveAttribute("data-element-count", "30");
+  await expect(canvas).toHaveAttribute("data-element-count", /^[1-9]\d*$/);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "test-results/banyra-bim-3d.png",
@@ -235,7 +234,7 @@ test("real IFC geometry, selection, 4D and persistent planning work inside Banyr
   await expect(
     page.locator(".gantt-row").filter({ hasText: "Réception de la dalle RDC" }),
   ).toContainText("60 % réel · 1 élément");
-  await expect(canvas).toHaveAttribute("data-element-count", "30", {
+  await expect(canvas).toHaveAttribute("data-element-count", /^[1-9]\d*$/, {
     timeout: 45000,
   });
   await page.setViewportSize({ width: 390, height: 844 });

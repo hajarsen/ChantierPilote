@@ -32,3 +32,12 @@ Cela valide le périmètre du MVP décrit dans le README. Aucun domaine public n
 hébergement n’a été acheté ou déployé. Ces contrôles ne remplacent pas une recette
 métier sur vos cas réels, une revue de sécurité avant ouverture publique et des
 tests réguliers de restauration des sauvegardes.
+
+
+## Mise à jour du modèle de démonstration — 9 novembre 2026
+
+La validation Chromium et les autres contrôles répertoriés ci-dessus ont été exécutés
+avant le remplacement de la maquette IFC4 synthétique par le fichier architectural
+IFC2x3 Duplex. Le nouveau modèle a été intégré au chargement de démonstration ;
+les parcours de validation décrits ci-dessus n’ont pas encore été rejoués sur ce
+nouveau fichier.

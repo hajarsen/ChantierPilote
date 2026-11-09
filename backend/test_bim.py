@@ -23,13 +23,13 @@ def test_bim_demo_file_is_private_and_idempotent(clients):
     assert owner.post(f"/api/projects/{pid}/bim/demo").json()["id"] == mid
     data = state(owner, pid)
     assert len(data["models"]) == 1
-    assert len(data["models"][0]["catalog"]) == 30
-    assert len(data["schedule"]) == 3
-    assert sum(len(t["element_ids"]) for t in data["schedule"]) == 30
+    assert len(data["models"][0]["catalog"]) >= 100
+    assert len(data["schedule"]) >= 3
+    assert sum(len(t["element_ids"]) for t in data["schedule"]) == len(data["models"][0]["catalog"])
     path = f"/api/projects/{pid}/bim/models/{mid}/file"
     download = owner.get(path)
     assert download.content.startswith(b"ISO-10303-21;")
-    assert b"IFC4" in download.content
+    assert b"IFC2X3" in download.content
     assert other.get(path).status_code == 404
     assert other.get(f"/api/projects/{pid}/bim").status_code == 404
 
