@@ -4,7 +4,7 @@
 
 Banyra rassemble dans un espace par chantier les tâches, les réserves, les contrôles, les documents et les données de suivi. Les équipes peuvent également relier les tâches du planning aux éléments d’une maquette 3D pour visualiser la séquence prévue des travaux.
 
-**État du projet** · Première version fonctionnelle en cours de développement. L’application est en français et les montants sont exprimés en dirhams marocains (MAD), hors taxes.
+**État du projet** · Première version fonctionnelle en cours de développement. Les montants sont exprimés en dirhams marocains (MAD), hors taxes.
 
 ## Ce que vous pouvez faire
 
