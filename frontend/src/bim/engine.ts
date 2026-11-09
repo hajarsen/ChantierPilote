@@ -31,6 +31,7 @@ export async function createViewer(
   format: "ifc" | "glb",
   onPick: (id: string, additive: boolean) => void,
   signal: AbortSignal,
+  nameLanguage: "source" | "fr" = "source",
 ): Promise<Viewer> {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#edf1e9");
@@ -58,6 +59,42 @@ export async function createViewer(
   const elements: ModelElement[] = [];
   const meshes = new Map<string, THREE.Mesh[]>();
   const facts = new Map<string, Record<string, string>>();
+  const localizedNames = new Map<string, string>();
+  const nameCounts = new Map<string, number>();
+  const frenchElementLabels: Record<string, string> = {
+    IFCWALL: "Mur",
+    IFCWALLSTANDARDCASE: "Mur",
+    IFCSLAB: "Dalle",
+    IFCCOLUMN: "Poteau",
+    IFCBEAM: "Poutre",
+    IFCDOOR: "Porte",
+    IFCWINDOW: "Fenêtre",
+    IFCSTAIR: "Escalier",
+    IFCSTAIRFLIGHT: "Volée d’escalier",
+    IFCFOOTING: "Semelle de fondation",
+    IFCRAILING: "Garde-corps",
+    IFCFURNISHINGELEMENT: "Mobilier",
+    IFCCOVERING: "Revêtement",
+    IFCMEMBER: "Élément structurel",
+    IFCRAMP: "Rampe",
+    IFCRAMPFLIGHT: "Volée de rampe",
+    IFCPLATE: "Plaque",
+    IFCPILE: "Pieu",
+    IFCROOF: "Toiture",
+    IFCBUILDINGELEMENTPROXY: "Élément de bâtiment",
+  };
+  const elementName = (id: string, category: string, sourceName: string) => {
+    if (nameLanguage !== "fr") return sourceName;
+    const previous = localizedNames.get(id);
+    if (previous) return previous;
+    const type = category.toUpperCase();
+    const label = frenchElementLabels[type] || "Élément";
+    const next = (nameCounts.get(label) || 0) + 1;
+    nameCounts.set(label, next);
+    const translated = `${label} ${next}`;
+    localizedNames.set(id, translated);
+    return translated;
+  };
   let ifc: import("web-ifc").IfcAPI | undefined;
   let modelId = -1;
   let ifcReady = false;
@@ -190,12 +227,13 @@ export async function createViewer(
       ifc.StreamAllMeshes(modelId, (flatMesh) => {
         const line = ifc!.GetLine(modelId, flatMesh.expressID);
         const category = ifc!.GetNameFromTypeCode(line.type);
+        const id = String(flatMesh.expressID);
+        const sourceName = String(
+          line.Name?.value || `${categoryLabel(category)} #${flatMesh.expressID}`,
+        );
         const element = {
-          id: String(flatMesh.expressID),
-          name: String(
-            line.Name?.value ||
-              `${categoryLabel(category)} #${flatMesh.expressID}`,
-          ),
+          id,
+          name: elementName(id, category, sourceName),
           category,
         };
         facts.set(element.id, {

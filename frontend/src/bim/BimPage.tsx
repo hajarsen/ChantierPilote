@@ -26,6 +26,8 @@ import {
 import "./bim.css";
 
 type Props = { project: Project; mode: "bim" | "planning" };
+const DEMO_IFC_FILENAME = "Ifc2x3_Duplex_Architecture.ifc";
+
 export default function BimPage({ project, mode }: Props) {
   const canWrite = project.role !== "viewer";
   const base = `/projects/${project.id}/bim`;
@@ -76,11 +78,10 @@ export default function BimPage({ project, mode }: Props) {
   async function load(preferred?: string) {
     let next = await api<BimState>(base);
     if (!active.current) return;
-    const demoModel = "Ifc2x3_Duplex_Architecture.ifc";
     if (
       project.is_demo &&
       canWrite &&
-      !next.models.some((item) => item.filename === demoModel)
+      !next.models.some((item) => item.filename === DEMO_IFC_FILENAME)
     ) {
       await api(`${base}/demo`, "POST");
       if (!active.current) return;
@@ -156,6 +157,7 @@ export default function BimPage({ project, mode }: Props) {
         model.format,
         (id, add) => onPick.current(id, add),
         controller.signal,
+        model.filename === DEMO_IFC_FILENAME ? "fr" : "source",
       );
       if (controller.signal.aborted) {
         instance.dispose();
@@ -238,7 +240,7 @@ export default function BimPage({ project, mode }: Props) {
       .toLocaleLowerCase("fr")
       .includes(filter.toLocaleLowerCase("fr")),
   );
-  const grouped = [...new Set(elements.map((element) => element.category))];
+  const grouped = [...new Set(elements.map((element) => categoryLabel(element.category)))];
   return (
     <div className="bim-workspace">
       {error && (
@@ -439,26 +441,41 @@ export default function BimPage({ project, mode }: Props) {
               <div className="bim-viewer-grid">
                 <aside className="bim-tree">
                   <h3>Catégories</h3>
-                  {grouped.map((category) => (
-                    <label key={category}>
-                      <input
-                        type="checkbox"
-                        checked={categories.has(category)}
-                        onChange={(event) =>
-                          setCategories((current) => {
-                            const next = new Set(current);
-                            if (event.target.checked) next.add(category);
-                            else next.delete(category);
-                            return next;
-                          })
-                        }
-                      />
-                      <span>{categoryLabel(category)}</span>
-                      <small>
-                        {elements.filter((e) => e.category === category).length}
-                      </small>
-                    </label>
-                  ))}
+                  {grouped.map((label) => {
+                    const categoryTypes = [
+                      ...new Set(
+                        elements
+                          .filter((element) => categoryLabel(element.category) === label)
+                          .map((element) => element.category),
+                      ),
+                    ];
+                    return (
+                      <label key={label}>
+                        <input
+                          type="checkbox"
+                          checked={categoryTypes.every((category) =>
+                            categories.has(category),
+                          )}
+                          onChange={(event) =>
+                            setCategories((current) => {
+                              const next = new Set(current);
+                              for (const category of categoryTypes) {
+                                if (event.target.checked) next.add(category);
+                                else next.delete(category);
+                              }
+                              return next;
+                            })
+                          }
+                        />
+                        <span>{label}</span>
+                        <small>
+                          {elements.filter((element) =>
+                            categoryTypes.includes(element.category),
+                          ).length}
+                        </small>
+                      </label>
+                    );
+                  })}
                   <h3>Éléments de la maquette</h3>
                   <input
                     aria-label="Rechercher un élément BIM"
