@@ -12,7 +12,7 @@ La maquette BIM proposée en démonstration est un duplex résidentiel au format
 
 Sur un chantier, les informations peuvent être dispersées entre les plans, les fichiers Excel, les échanges WhatsApp et les comptes rendus. Cette dispersion complique le suivi des décisions, des réserves et de l’avancement.
 
-Banyra vise à réunir ces informations dans un même espace pour faciliter le travail des ingénieurs travaux et des équipes chantier. Le prototype associe suivi terrain, maquette BIM et planning, avec une interface en français et des montants en MAD.
+Banyra vise à réunir ces informations dans un même espace pour faciliter le travail des ingénieurs travaux et des équipes chantier. Le prototype associe suivi terrain, maquette BIM et planning.
 
 L’objectif est de développer progressivement un outil utile au quotidien, en confrontant ses fonctionnalités aux besoins réels des professionnels de la construction au Maroc.
 
