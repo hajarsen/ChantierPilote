@@ -95,15 +95,17 @@ export async function createViewer(
     localizedNames.set(id, translated);
     return translated;
   };
+  const frenchStoreyNames: Record<string, string> = {
+    "level 1": "Niveau 1",
+    "level 2": "Niveau 2",
+    "t/fdn": "Fondations",
+    roof: "Toiture",
+  };
   const levelName = (sourceName: string) => {
     if (nameLanguage !== "fr") return sourceName;
     return (
-      {
-        "level 1": "Niveau 1",
-        "level 2": "Niveau 2",
-        "t/fdn": "Fondations",
-        roof: "Toiture",
-      }[sourceName.trim().toLocaleLowerCase("fr")] || sourceName
+      frenchStoreyNames[sourceName.trim().toLocaleLowerCase("fr")] ||
+      sourceName
     );
   };
   let ifc: import("web-ifc").IfcAPI | undefined;
