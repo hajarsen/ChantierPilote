@@ -130,13 +130,33 @@ input[readonly] {
   margin-top: 9px;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
-  background: #e6eee6;
-  color: #195e47;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  background: #fff5eb;
   width: 38px;
   height: 42px;
   border-radius: 12px 12px 12px 3px;
+  padding: 9px 8px;
+  transform: skew(-3deg);
+}
+.brand-mark i {
+  display: block;
+  width: 6px;
+  background: #e6693f;
+  border-radius: 2px;
+}
+.brand-mark i:nth-child(1) {
+  height: 18px;
+}
+.brand-mark i:nth-child(2) {
+  height: 25px;
+  background: #f08a4f;
+}
+.brand-mark i:nth-child(3) {
+  height: 13px;
+  background: #1f7058;
 }
 .brand-dot {
   color: #976039;
@@ -1163,6 +1183,91 @@ tbody tr:last-child td {
   font-size: 11px;
   color: #69735c;
   line-height: 1.8;
+}
+.form-section-title {
+  margin-top: 5px;
+  padding: 16px 0 0;
+  border-top: 1px solid #e5ece3;
+  color: #244d3c;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.journal-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin-top: 13px;
+}
+.journal-details p {
+  display: grid;
+  gap: 3px;
+  color: #5d6b62;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.journal-details strong {
+  color: #285846;
+}
+.journal-tasks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 11px;
+}
+.journal-tasks > strong {
+  width: 100%;
+  color: #285846;
+}
+.journal-tasks span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #eef4ea;
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: #50664f;
+}
+.journal-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+.journal-photos button {
+  width: 58px;
+  height: 48px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #edf3ea;
+  color: #315d49;
+  display: grid;
+  place-items: center;
+}
+.journal-photos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.diary-upload {
+  border: 1px solid #dce7d9;
+  background: #f7faf5;
+  border-radius: 10px;
+  padding: 16px;
+}
+.diary-upload > strong {
+  color: #285846;
+  font-size: 12px;
+}
+.demo-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  margin: -24px 0 35px;
+  color: #738078;
 }
 .checklist {
   border: 1px solid #e1ead7;

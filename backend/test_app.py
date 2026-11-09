@@ -87,6 +87,30 @@ def test_private_projects_are_not_visible_to_other_accounts(clients):
     assert other.put(f"/api/projects/{pid}", json={"name": "Interdit"}).status_code == 404
 
 
+def test_moroccan_demo_and_complete_site_diary(clients):
+    owner = clients[0]
+    register(owner)
+    created = owner.post("/api/demo")
+    assert created.status_code == 201, created.text
+    pid = created.json()["id"]
+    data = workspace(owner, pid)
+    assert data["project"]["city"] == "Rabat"
+    assert data["project"]["budget"] == "18500000.00"
+    assert data["project"]["engineering_office"].endswith("(exemple)")
+    assert len(data["tasks"]) == 3
+    diary = next(entry for entry in data["entries"] if entry["kind"] == "diary")
+    assert diary["data"]["workforce"] == 42
+    assert diary["data"]["deliveries"].startswith("72 m³")
+    assert diary["data"]["next_day"]
+    assert len(diary["data"]["task_ids"]) == 2
+
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+    uploaded = owner.post(f"/api/projects/{pid}/files", data={"entry_id": diary["id"]}, files={"file": ("chantier.png", png, "image/png")})
+    assert uploaded.status_code == 201, uploaded.text
+    file_record = next(item for item in workspace(owner, pid)["files"] if item["id"] == uploaded.json()["id"])
+    assert file_record["entry_id"] == diary["id"]
+
+
 def test_invitations_bind_email_and_are_single_use(clients):
     owner, other, viewer = clients
     register(owner)

@@ -209,15 +209,52 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
     @app.post("/api/projects", status_code=201)
     def create_project(data: ProjectInput, actor=Depends(user), connection=Depends(db)):
         project_id = uid()
-        connection.execute("INSERT INTO projects VALUES(?,?,?,?,?,?,?,?,?,?)", (project_id, data.name, data.reference, data.city, data.client, money(data.budget), str(data.vat), str(data.start_date), actor["id"], now()))
+        connection.execute("""INSERT INTO projects
+            (id,name,reference,city,client,budget,vat,start_date,owner_id,created_at,end_date,address,province,project_type,area,architect,engineering_office,contractor,site_manager)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (project_id, data.name, data.reference, data.city, data.client, money(data.budget), str(data.vat), str(data.start_date), actor["id"], now(), str(data.end_date or ""), data.address, data.province, data.project_type, money(data.area), data.architect, data.engineering_office, data.contractor, data.site_manager))
         connection.execute("INSERT INTO members VALUES(?,?,?)", (project_id, actor["id"], "owner"))
         audit(connection, project_id, actor["id"], "Chantier créé")
+        return {"id": project_id}
+
+    @app.post("/api/demo", status_code=201)
+    def create_demo(actor=Depends(user), connection=Depends(db)):
+        """Create an explicitly labelled Moroccan sample workspace for evaluation."""
+        project_id = uid()
+        created = now()
+        connection.execute("""INSERT INTO projects
+            (id,name,reference,city,client,budget,vat,start_date,owner_id,created_at,end_date,address,province,project_type,area,architect,engineering_office,contractor,site_manager)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (project_id, "Résidence Al Manar — Démonstration", "MCH-2026-014", "Rabat", "Atlas Immobilier (donnée exemple)", "18500000.00", "0", "2026-09-01", actor["id"], created, "2028-02-29", "Avenue Annakhil, Hay Riad", "Rabat", "Logement", "12400.00", "Salma El Idrissi (exemple)", "BET Al Omrane Conseil (exemple)", "Bâtir Maroc (exemple)", actor["name"]))
+        connection.execute("INSERT INTO members VALUES(?,?,?)", (project_id, actor["id"], "owner"))
+        tasks = [
+            ("Contrôler le ferraillage du voile V12", "quality", "Gros œuvre", "urgent", "2026-11-10"),
+            ("Réserve d’étanchéité en terrasse bloc B", "reserve", "Étanchéité", "high", "2026-11-12"),
+            ("Valider les attentes électriques du niveau R+2", "action", "Électricité", "normal", "2026-11-14"),
+        ]
+        demo_task_ids = []
+        for title, kind, trade, priority, due in tasks:
+            task_id = uid()
+            demo_task_ids.append(task_id)
+            checks = [{"label": item, "done": False} for item in ("Plan applicable vérifié", "Mise en œuvre contrôlée", "Photos et écarts consignés")] if kind == "quality" else []
+            connection.execute("INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (task_id, project_id, title, "Donnée de démonstration à adapter au chantier réel.", kind, trade, actor["id"], due, "open", priority, json.dumps(checks), 1, actor["id"], created))
+        samples = [
+            ("diary", {"date": "2026-11-09", "workforce": 42, "weather": "Ensoleillé, vent faible", "temperature": "18–25 °C", "workforce_detail": "Bâtir Maroc : 18 ouvriers gros œuvre\nÉlec Atlas : 6 électriciens\nPlomb Maroc : 4 plombiers\nEncadrement et autres équipes : 14 personnes", "work_zones": "Bloc A R+2 · Bloc B terrasse", "notes": "Coulage de la dalle du bloc A terminé à 15 h 30. Pose des relevés d’étanchéité du bloc B en cours.", "equipment": "Grue à tour GT-01 · Pompe à béton · 2 nacelles", "deliveries": "72 m³ béton C30/37 — BL 4581 à 4587 — conforme", "quality": "Éprouvettes béton prélevées par le laboratoire. Ferraillage visé avant coulage.", "safety": "Causerie travail en hauteur. Garde-corps du bloc B remis en conformité.", "incidents": "Néant", "visitors": "Salma El Idrissi — architecte (exemple)", "decisions": "Reprendre deux réservations techniques avant le 11/11.", "blockers": "Livraison menuiserie aluminium décalée de 2 jours.", "next_day": "Décoffrage zone A2 · Réception étanchéité terrasse · Implantation cloisons R+1", "task_ids": demo_task_ids[:2]}),
+            ("expense", {"title": "Location pompe à béton", "amount": "4800.00", "category": "Matériel", "supplier": "Loca BTP Maroc (exemple)", "date": "2026-11-09"}),
+            ("contract", {"title": "Lot étanchéité", "partner": "Étanche Maroc (exemple)", "reference": "ST-ET-003", "amount": "780000.00", "retention": "10", "payment_days": 60}),
+            ("supply", {"title": "Ciment CPJ 45", "supplier": "Matériaux du Centre (exemple)", "quantity": "120", "unit_price": "92.50", "delivery": "2026-11-13", "status": "draft", "amount": "11100.00"}),
+            ("meeting", {"title": "Réunion hebdomadaire de chantier", "date": "2026-11-07", "participants": "Maître d’ouvrage, architecte, BET, entreprise", "notes": "Priorité à la levée des réserves du bloc B et à la préparation du planning à trois semaines."}),
+        ]
+        for kind, data in samples:
+            connection.execute("INSERT INTO entries VALUES(?,?,?,?,?,?,?)", (uid(), project_id, kind, json.dumps(data), 1, actor["id"], created))
+        audit(connection, project_id, actor["id"], "Chantier de démonstration marocain créé")
         return {"id": project_id}
 
     @app.put("/api/projects/{project_id}")
     def edit_project(project_id: str, data: ProjectInput, actor=Depends(user), connection=Depends(db)):
         access(connection, project_id, actor, owner=True)
-        connection.execute("UPDATE projects SET name=?,reference=?,city=?,client=?,budget=?,vat=?,start_date=? WHERE id=?", (data.name, data.reference, data.city, data.client, money(data.budget), str(data.vat), str(data.start_date), project_id))
+        connection.execute("""UPDATE projects SET name=?,reference=?,city=?,client=?,budget=?,vat=?,start_date=?,end_date=?,address=?,province=?,project_type=?,area=?,architect=?,engineering_office=?,contractor=?,site_manager=? WHERE id=?""",
+            (data.name, data.reference, data.city, data.client, money(data.budget), str(data.vat), str(data.start_date), str(data.end_date or ""), data.address, data.province, data.project_type, money(data.area), data.architect, data.engineering_office, data.contractor, data.site_manager, project_id))
         audit(connection, project_id, actor["id"], "Paramètres du chantier modifiés")
         return {"ok": True}
 
@@ -274,6 +311,11 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         except ValidationError:
             fail(422, "Vérifiez les dates, montants et champs obligatoires du document.")
         if data.kind == "diary":
+            if clean["task_ids"]:
+                placeholders = ",".join("?" for _ in clean["task_ids"])
+                found = connection.execute(f"SELECT COUNT(*) FROM tasks WHERE project_id=? AND id IN ({placeholders})", (project_id, *clean["task_ids"])).fetchone()[0]
+                if found != len(set(clean["task_ids"])):
+                    fail(422, "Une tâche liée n’appartient pas à ce chantier.")
             duplicate = connection.execute("SELECT id FROM entries WHERE project_id=? AND kind='diary' AND json_extract(data,'$.date')=? AND id!=?", (project_id, clean["date"], old["id"] if old else "")).fetchone()
             if duplicate:
                 fail(409, "Un journal existe déjà pour cette journée. Ouvrez-le pour le modifier.")
@@ -377,10 +419,12 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"ok": True}
 
     @app.post("/api/projects/{project_id}/files", status_code=201)
-    async def upload(project_id: str, file: UploadFile = File(), label: str = Form(""), revision: str = Form("A"), task_id: str = Form(""), actor=Depends(user), connection=Depends(db)):
+    async def upload(project_id: str, file: UploadFile = File(), label: str = Form(""), revision: str = Form("A"), task_id: str = Form(""), entry_id: str = Form(""), actor=Depends(user), connection=Depends(db)):
         access(connection, project_id, actor, write=True)
         if task_id and not connection.execute("SELECT 1 FROM tasks WHERE id=? AND project_id=?", (task_id, project_id)).fetchone():
             fail(422, "Action introuvable sur ce chantier.")
+        if entry_id and not connection.execute("SELECT 1 FROM entries WHERE id=? AND project_id=? AND kind='diary'", (entry_id, project_id)).fetchone():
+            fail(422, "Journal introuvable sur ce chantier.")
         content = await file.read(MAX_FILE + 1)
         await file.close()
         if len(content) > MAX_FILE:
@@ -396,7 +440,10 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         target = uploads / file_id
         try:
             target.write_bytes(content)
-            connection.execute("INSERT INTO files VALUES(?,?,?,?,?,?,?,?,?,?)", (file_id, project_id, task_id or None, name, label or name, revision, mime, len(content), actor["id"], now()))
+            connection.execute("""INSERT INTO files
+                (id,project_id,task_id,name,label,revision,mime,size,created_by,created_at,entry_id)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (file_id, project_id, task_id or None, name, label or name, revision, mime, len(content), actor["id"], now(), entry_id or None))
             audit(connection, project_id, actor["id"], f"Document ajouté : {name}")
         except BaseException:
             target.unlink(missing_ok=True)

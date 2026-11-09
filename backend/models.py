@@ -42,6 +42,15 @@ class ProjectInput(Model):
     budget: Decimal = Field(default=Decimal(0), ge=0, le=Decimal("999999999999"), max_digits=14, decimal_places=2)
     vat: Decimal = Field(default=Decimal(0), ge=0, le=100, max_digits=5, decimal_places=2)
     start_date: date = Field(default_factory=date.today)
+    end_date: date | None = None
+    address: str = Field(default="", max_length=300)
+    province: str = Field(default="", max_length=100)
+    project_type: Literal["Logement", "Bureaux", "Équipement public", "Industriel", "Hôtelier", "Infrastructure", "Autre"] = "Logement"
+    area: Decimal = Field(default=Decimal(0), ge=0, le=Decimal("99999999"), max_digits=10, decimal_places=2)
+    architect: str = Field(default="", max_length=160)
+    engineering_office: str = Field(default="", max_length=160)
+    contractor: str = Field(default="", max_length=160)
+    site_manager: str = Field(default="", max_length=160)
 
 
 class Check(Model):
@@ -70,6 +79,19 @@ class Diary(Model):
     notes: str = Field(min_length=2, max_length=10000)
     workforce: int = Field(default=0, ge=0, le=100000)
     weather: str = Field(default="", max_length=100)
+    temperature: str = Field(default="", max_length=50)
+    workforce_detail: str = Field(default="", max_length=4000)
+    work_zones: str = Field(default="", max_length=2000)
+    equipment: str = Field(default="", max_length=4000)
+    deliveries: str = Field(default="", max_length=4000)
+    quality: str = Field(default="", max_length=4000)
+    safety: str = Field(default="", max_length=4000)
+    incidents: str = Field(default="", max_length=4000)
+    visitors: str = Field(default="", max_length=2000)
+    decisions: str = Field(default="", max_length=4000)
+    blockers: str = Field(default="", max_length=4000)
+    next_day: str = Field(default="", max_length=4000)
+    task_ids: list[str] = Field(default_factory=list, max_length=50)
 
 
 class Money(Model):

@@ -16,7 +16,9 @@ python3 run.py
 ```
 
 Ouvrez **http://localhost:8010** et créez votre compte. Gardez le terminal ouvert.
-Les données commencent vides : créez un chantier, puis invitez votre équipe.
+Les données commencent vides : créez un chantier, puis invitez votre équipe. Pour
+évaluer rapidement l’interface, le bouton « Charger un exemple marocain » crée un
+jeu de données fictif, clairement identifié comme démonstration.
 Ce port est volontairement différent des anciennes versions de l’application.
 
 Après une mise à jour : `python3 run.py --build`.
@@ -26,13 +28,16 @@ Cette version utilise sa propre base ; elle ne lit ni ne supprime les anciennes 
 ## Fonctions disponibles
 
 - Comptes personnels, connexion et déconnexion par session HTTP sécurisée.
-- Chantiers privés avec référence du marché, client, ville et enveloppe en MAD.
+- Dossier chantier privé : marché, adresse, ville/province, type, surface, dates,
+  client, architecte, BET, entreprise, responsable et enveloppe en MAD.
 - Invitations à usage unique, liées à un e-mail, valables sept jours.
   Le responsable partage le lien lui-même ; aucun service d’e-mail n’est nécessaire.
 - Rôles responsable, collaborateur et consultation ; contrôle des droits côté serveur.
 - Actions, réserves, affectation, corps d’état, échéances, priorités et photos.
 - Contrôles qualité et sécurité avec clôture conditionnée aux points vérifiés.
-- Journal quotidien, effectifs et conditions météo ; un journal par date et chantier.
+- Journal quotidien complet : météo, effectifs par corps d’état, zones, travaux,
+  engins, livraisons, qualité, sécurité, incidents, visites, décisions, blocages,
+  programme du lendemain, tâches liées et photos ; un journal par date et chantier.
 - Dépenses et budget HT, calculés en arithmétique décimale, en dirhams marocains.
 - Marchés et situations mensuelles : plafonnement du cumul, retenue contractuelle,
   validation par le responsable, puis enregistrement du règlement.

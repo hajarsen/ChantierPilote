@@ -2,9 +2,10 @@
 
 Les contrôles suivants ont été exécutés sur cette nouvelle base :
 
-- 16 tests API : comptes et sessions, protection CSRF et origine, isolation des
+- 17 tests API : comptes et sessions, protection CSRF et origine, isolation des
   chantiers, invitations liées à un e-mail, lecture seule et révocation,
-  contrôles qualité, conflits d’édition, journal quotidien, décimales,
+  contrôles qualité, conflits d’édition, journal quotidien complet et ses photos,
+  jeu de démonstration marocain, décimales,
   plafonds des situations, commandes et pièces jointes privées.
 - 5 parcours Chromium réels sur l’interface compilée et une base temporaire :
   réserve avec photo et contrôle, journal et chaîne financière, invitation d’un

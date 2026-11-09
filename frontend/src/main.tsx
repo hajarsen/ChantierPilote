@@ -104,6 +104,31 @@ const trades = [
   "Finitions",
   "VRD",
 ];
+const moroccanCities = [
+  "Agadir",
+  "Béni Mellal",
+  "Berrechid",
+  "Casablanca",
+  "Dakhla",
+  "El Jadida",
+  "Errachidia",
+  "Essaouira",
+  "Fès",
+  "Kénitra",
+  "Khouribga",
+  "Laâyoune",
+  "Marrakech",
+  "Meknès",
+  "Mohammédia",
+  "Nador",
+  "Oujda",
+  "Rabat",
+  "Safi",
+  "Salé",
+  "Settat",
+  "Tanger",
+  "Tétouan",
+];
 const defaultChecks = [
   "Plans et documents applicables vérifiés",
   "Matériaux et mise en œuvre contrôlés",
@@ -121,7 +146,9 @@ function Brand() {
   return (
     <span className="brand">
       <span className="brand-mark">
-        <HardHat size={22} strokeWidth={1.7} />
+        <i />
+        <i />
+        <i />
       </span>
       <span>
         banyra<span className="brand-dot">.</span>
@@ -640,6 +667,13 @@ function App() {
       setProjectId(result.project_id);
     }, false);
   }
+  async function createDemo() {
+    await mutate(async () => {
+      const result = await api<{ id: string }>("/demo", "POST");
+      selectedProject.current = result.id;
+      setProjectId(result.id);
+    }, false);
+  }
   if (booting)
     return (
       <div className="boot">
@@ -1021,6 +1055,66 @@ function App() {
                         {e.data.workforce} personnes ·{" "}
                         {e.data.weather || "Météo non renseignée"}
                       </small>
+                      <div className="journal-details">
+                        {[
+                          ["Zones", e.data.work_zones],
+                          ["Équipe", e.data.workforce_detail],
+                          ["Matériel", e.data.equipment],
+                          ["Livraisons", e.data.deliveries],
+                          ["Qualité", e.data.quality],
+                          ["Sécurité", e.data.safety],
+                          ["Blocages", e.data.blockers],
+                          ["Demain", e.data.next_day],
+                        ]
+                          .filter(([, content]) => content)
+                          .map(([label, content]) => (
+                            <p key={String(label)}>
+                              <strong>{label}</strong>
+                              {String(content)}
+                            </p>
+                          ))}
+                      </div>
+                      {Array.isArray(e.data.task_ids) &&
+                        e.data.task_ids.length > 0 && (
+                          <div className="journal-tasks">
+                            <strong>Tâches liées</strong>
+                            {e.data.task_ids.map((id) => {
+                              const task = workspace!.tasks.find(
+                                (item) => item.id === id,
+                              );
+                              return task ? (
+                                <span key={id}>
+                                  <CheckCircle2 size={13} />
+                                  {task.title}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                      {workspace!.files.some((f) => f.entry_id === e.id) && (
+                        <div className="journal-photos">
+                          {workspace!.files
+                            .filter((f) => f.entry_id === e.id)
+                            .map((f) => (
+                              <button
+                                key={f.id}
+                                onClick={() =>
+                                  setDialog({ type: "file", file: f })
+                                }
+                                aria-label={`Voir ${f.label}`}
+                              >
+                                {f.mime.startsWith("image/") ? (
+                                  <img
+                                    src={`/api/projects/${projectId}/files/${f.id}`}
+                                    alt={f.label}
+                                  />
+                                ) : (
+                                  <FileText size={20} />
+                                )}
+                              </button>
+                            ))}
+                        </div>
+                      )}
                     </div>
                     {canWrite && (
                       <button
@@ -1587,6 +1681,21 @@ function App() {
                 onClick={() => open("project")}
                 button="Créer un chantier"
               />
+              {!projects.length && (
+                <div className="demo-action">
+                  <button
+                    className="button secondary"
+                    disabled={busy}
+                    onClick={() => void createDemo()}
+                  >
+                    <Building2 size={16} /> Charger un exemple marocain
+                  </button>
+                  <small>
+                    Données fictives clairement identifiées, à supprimer ou
+                    remplacer.
+                  </small>
+                </div>
+              )}
             </section>
           )}
           <footer className="page-footer">
@@ -1642,9 +1751,14 @@ function DialogContent({
   const [invitePath, setInvitePath] = useState("");
   const [uploadError, setUploadError] = useState("");
   const entry = dialog.entry;
+  const [diaryTaskIds, setDiaryTaskIds] = useState<string[]>(
+    Array.isArray(entry?.data.task_ids) ? entry.data.task_ids : [],
+  );
   const projectId = workspace?.project.id ?? "";
-  const value = (key: string, fallback: string | number = "") =>
-    entry?.data[key] ?? fallback;
+  const value = (key: string, fallback: string | number = "") => {
+    const result = entry?.data[key];
+    return Array.isArray(result) ? fallback : (result ?? fallback);
+  };
   const title =
     dialog.type === "task" || dialog.type === "quality"
       ? dialog.task
@@ -1703,6 +1817,17 @@ function DialogContent({
       min,
       defaultValue: initial ?? value(name),
     });
+  const area = (name: string, label: string, placeholder: string, rows = 3) => (
+    <Field label={label} wide>
+      <textarea
+        name={name}
+        rows={rows}
+        maxLength={4000}
+        defaultValue={value(name)}
+        placeholder={placeholder}
+      />
+    </Field>
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1711,11 +1836,16 @@ function DialogContent({
     const values = Object.fromEntries(form) as Record<string, string>;
     await save(async () => {
       if (dialog.type === "project" || dialog.type === "project-settings") {
+        const projectValues = {
+          ...values,
+          end_date: values.end_date || null,
+          vat: workspace?.project.vat ?? "0",
+        };
         const result = await api(
           "/projects" +
             (dialog.type === "project-settings" ? `/${projectId}` : ""),
           dialog.type === "project" ? "POST" : "PUT",
-          { ...values, vat: workspace?.project.vat ?? "0" },
+          projectValues,
         );
         return result;
       }
@@ -1748,6 +1878,7 @@ function DialogContent({
       }
       const data = {
         ...values,
+        ...(dialog.type === "diary" ? { task_ids: diaryTaskIds } : {}),
         ...(["supply", "valuation"].includes(dialog.type) && !entry
           ? { status: "draft" }
           : {}),
@@ -1837,7 +1968,12 @@ function DialogContent({
     );
 
   return (
-    <Modal title={title} close={close} busy={busy}>
+    <Modal
+      title={title}
+      close={close}
+      busy={busy}
+      large={["project", "project-settings", "diary"].includes(dialog.type)}
+    >
       <form onSubmit={submit}>
         <div className="form-grid">
           {(dialog.type === "project" ||
@@ -1856,13 +1992,22 @@ function DialogContent({
                     ? workspace!.project.reference
                     : "",
               })}
-              {text("city", "Ville", {
-                required: false,
-                defaultValue:
-                  dialog.type === "project-settings"
-                    ? workspace!.project.city
-                    : "",
-              })}
+              <Field label="Ville">
+                <input
+                  name="city"
+                  list="moroccan-cities"
+                  defaultValue={
+                    dialog.type === "project-settings"
+                      ? workspace!.project.city
+                      : ""
+                  }
+                />
+                <datalist id="moroccan-cities">
+                  {moroccanCities.map((city) => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
+              </Field>
               {text("client", "Client / maître d’ouvrage", {
                 required: false,
                 defaultValue:
@@ -1884,6 +2029,87 @@ function DialogContent({
                   dialog.type === "project-settings"
                     ? workspace!.project.start_date
                     : day(),
+              })}
+              {text("end_date", "Date prévisionnelle de fin", {
+                type: "date",
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.end_date
+                    : "",
+              })}
+              <Field label="Type de projet">
+                <select
+                  name="project_type"
+                  defaultValue={
+                    dialog.type === "project-settings"
+                      ? workspace!.project.project_type
+                      : "Logement"
+                  }
+                >
+                  {[
+                    "Logement",
+                    "Bureaux",
+                    "Équipement public",
+                    "Industriel",
+                    "Hôtelier",
+                    "Infrastructure",
+                    "Autre",
+                  ].map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
+                </select>
+              </Field>
+              {decimal(
+                "area",
+                "Surface construite (m²)",
+                dialog.type === "project-settings"
+                  ? workspace!.project.area
+                  : "0",
+                0,
+              )}
+              {text("address", "Adresse du chantier", {
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.address
+                    : "",
+              })}
+              {text("province", "Province / préfecture", {
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.province
+                    : "",
+              })}
+              <p className="form-section-title wide">Intervenants du projet</p>
+              {text("architect", "Architecte", {
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.architect
+                    : "",
+              })}
+              {text("engineering_office", "Bureau d’études techniques", {
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.engineering_office
+                    : "",
+              })}
+              {text("contractor", "Entreprise principale", {
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.contractor
+                    : "",
+              })}
+              {text("site_manager", "Ingénieur / conducteur de travaux", {
+                required: false,
+                defaultValue:
+                  dialog.type === "project-settings"
+                    ? workspace!.project.site_manager
+                    : "",
               })}
             </>
           )}
@@ -2084,6 +2310,15 @@ function DialogContent({
                 defaultValue: value("workforce", 0),
               })}
               {text("weather", "Conditions météo", { required: false })}
+              {text("temperature", "Température / intempéries", {
+                required: false,
+              })}
+              {text("work_zones", "Zones de travail", { required: false })}
+              {area(
+                "workforce_detail",
+                "Répartition des effectifs par entreprise et corps d’état",
+                "Ex. Atlas Bâtiment : 8 coffreurs, 5 ferrailleurs · Élec Maroc : 3 électriciens",
+              )}
               <Field label="Travaux réalisés et points de vigilance" wide>
                 <textarea
                   name="notes"
@@ -2094,6 +2329,128 @@ function DialogContent({
                   defaultValue={value("notes")}
                 />
               </Field>
+              {area(
+                "equipment",
+                "Matériel et engins présents",
+                "Grue, pelle, nacelle, bétonnière, véhicules…",
+              )}
+              {area(
+                "deliveries",
+                "Livraisons et réceptions",
+                "Matériau, fournisseur, quantité, bon de livraison et conformité",
+              )}
+              {area(
+                "quality",
+                "Contrôles qualité et essais",
+                "Contrôles réalisés, résultats, visas et non-conformités",
+              )}
+              {area(
+                "safety",
+                "Sécurité et environnement",
+                "Causerie, EPI, protections collectives, déchets et observations HSE",
+              )}
+              {area(
+                "incidents",
+                "Incidents, accidents ou dommages",
+                "Indiquez « Néant » si aucun événement",
+              )}
+              {area(
+                "visitors",
+                "Visites et personnes présentes",
+                "Maître d’ouvrage, architecte, BET, laboratoire, autorités…",
+                2,
+              )}
+              {area(
+                "decisions",
+                "Décisions, instructions et visas",
+                "Décisions prises, responsable et délai attendu",
+              )}
+              {area(
+                "blockers",
+                "Arrêts, retards et blocages",
+                "Cause, impact sur le planning et action corrective",
+              )}
+              {area(
+                "next_day",
+                "Programme du lendemain",
+                "Travaux prévus, besoins, livraisons et points à préparer",
+              )}
+              <fieldset className="checklist wide">
+                <legend>Tâches et réserves traitées dans la journée</legend>
+                {workspace!.tasks.length ? (
+                  workspace!.tasks.map((task) => (
+                    <label key={task.id}>
+                      <input
+                        type="checkbox"
+                        checked={diaryTaskIds.includes(task.id)}
+                        onChange={(event) =>
+                          setDiaryTaskIds((current) =>
+                            event.target.checked
+                              ? [...current, task.id]
+                              : current.filter((id) => id !== task.id),
+                          )
+                        }
+                      />
+                      <span>
+                        {task.title} · {task.trade} · {kindLabel[task.status]}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <small>
+                    Créez d’abord une action ou une réserve pour la rattacher au
+                    journal.
+                  </small>
+                )}
+              </fieldset>
+              {entry && (
+                <div className="diary-upload wide">
+                  <strong>Photos et pièces du jour</strong>
+                  <div className="attachment-list">
+                    {workspace!.files
+                      .filter((f) => f.entry_id === entry.id)
+                      .map((f) => (
+                        <a
+                          key={f.id}
+                          href={`/api/projects/${projectId}/files/${f.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <FileText size={15} />
+                          {f.label}
+                        </a>
+                      ))}
+                  </div>
+                  {canWrite && (
+                    <label className="field">
+                      <span>Ajouter une photo ou un PDF (10 Mo maximum)</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,application/pdf"
+                        disabled={busy}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) return;
+                          const form = new FormData();
+                          form.append("file", file);
+                          form.append("entry_id", entry.id);
+                          void save(
+                            () =>
+                              api(`/projects/${projectId}/files`, "POST", form),
+                            false,
+                          );
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              )}
+              {!entry && (
+                <p className="form-note wide">
+                  Après l’enregistrement, ouvrez ce journal avec « Modifier »
+                  pour ajouter les photos de la journée.
+                </p>
+              )}
             </>
           )}
           {dialog.type === "expense" && (

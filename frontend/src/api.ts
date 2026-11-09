@@ -8,6 +8,15 @@ export type Project = {
   budget: string;
   vat: string;
   start_date: string;
+  end_date: string;
+  address: string;
+  province: string;
+  project_type: string;
+  area: string;
+  architect: string;
+  engineering_office: string;
+  contractor: string;
+  site_manager: string;
   role: "owner" | "member" | "viewer";
 };
 export type Check = { label: string; done: boolean };
@@ -27,13 +36,14 @@ export type Task = {
 export type Entry = {
   id: string;
   kind: string;
-  data: Record<string, string | number>;
+  data: Record<string, any>;
   version: number;
   created_at: string;
 };
 export type Document = {
   id: string;
   task_id: string | null;
+  entry_id: string | null;
   name: string;
   label: string;
   revision: string;

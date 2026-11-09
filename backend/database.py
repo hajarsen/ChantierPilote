@@ -65,3 +65,22 @@ def initialize(path: Path) -> None:
     with connect(path) as db:
         db.execute("PRAGMA journal_mode=WAL")
         db.executescript(SCHEMA)
+        # Additive migrations preserve databases created by earlier Banyra versions.
+        project_columns = {
+            "end_date": "TEXT NOT NULL DEFAULT ''",
+            "address": "TEXT NOT NULL DEFAULT ''",
+            "province": "TEXT NOT NULL DEFAULT ''",
+            "project_type": "TEXT NOT NULL DEFAULT 'Logement'",
+            "area": "TEXT NOT NULL DEFAULT '0.00'",
+            "architect": "TEXT NOT NULL DEFAULT ''",
+            "engineering_office": "TEXT NOT NULL DEFAULT ''",
+            "contractor": "TEXT NOT NULL DEFAULT ''",
+            "site_manager": "TEXT NOT NULL DEFAULT ''",
+        }
+        existing = {row[1] for row in db.execute("PRAGMA table_info(projects)")}
+        for name, definition in project_columns.items():
+            if name not in existing:
+                db.execute(f"ALTER TABLE projects ADD COLUMN {name} {definition}")
+        file_columns = {row[1] for row in db.execute("PRAGMA table_info(files)")}
+        if "entry_id" not in file_columns:
+            db.execute("ALTER TABLE files ADD COLUMN entry_id TEXT REFERENCES entries(id)")
