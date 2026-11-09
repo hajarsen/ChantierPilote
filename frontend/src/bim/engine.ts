@@ -95,6 +95,17 @@ export async function createViewer(
     localizedNames.set(id, translated);
     return translated;
   };
+  const levelName = (sourceName: string) => {
+    if (nameLanguage !== "fr") return sourceName;
+    return (
+      {
+        "level 1": "Niveau 1",
+        "level 2": "Niveau 2",
+        "t/fdn": "Fondations",
+        roof: "Toiture",
+      }[sourceName.trim().toLocaleLowerCase("fr")] || sourceName
+    );
+  };
   let ifc: import("web-ifc").IfcAPI | undefined;
   let modelId = -1;
   let ifcReady = false;
@@ -294,8 +305,8 @@ export async function createViewer(
           const { node, level } = pending.pop()!;
           const nextLevel =
             node.type.toUpperCase() === "IFCBUILDINGSTOREY"
-              ? String(
-                  ifc.GetLine(modelId, node.expressID).Name?.value || "Niveau",
+              ? levelName(
+                  String(ifc.GetLine(modelId, node.expressID).Name?.value || "Niveau"),
                 )
               : level;
           const properties = facts.get(String(node.expressID));
