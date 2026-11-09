@@ -235,9 +235,7 @@ export default function BimPage({ project, mode }: Props) {
   );
   const grouped = [...new Set(elements.map((element) => element.category))];
   return (
-    <div
-      className={`bim-workspace ${mode === "planning" ? "bim-planning-first" : ""}`}
-    >
+    <div className="bim-workspace">
       {error && (
         <p className="error" role="alert">
           {error}
@@ -310,6 +308,31 @@ export default function BimPage({ project, mode }: Props) {
               )}
             </div>
           </section>
+          {mode === "planning" && (
+            <section className="panel bim-planning">
+              <div className="section-heading">
+                <div>
+                  <h2>Planning des travaux</h2>
+                  <p>
+                    Dates prévues, dépendances et avancement réel.{" "}
+                    {data.schedule.length} tâche
+                    {data.schedule.length > 1 ? "s" : ""} enregistrée
+                    {data.schedule.length > 1 ? "s" : ""}.
+                  </p>
+                </div>
+                {canWrite && (
+                  <button
+                    className="text-button"
+                    onClick={() => setEditor("new")}
+                  >
+                    <Plus size={16} />
+                    Nouvelle tâche
+                  </button>
+                )}
+              </div>
+              <Gantt tasks={data.schedule} edit={(task) => setEditor(task)} />
+            </section>
+          )}
           {canWrite && (
             <form className="bim-import" onSubmit={importModel}>
               <label className="field bim-file-picker">
@@ -579,31 +602,6 @@ export default function BimPage({ project, mode }: Props) {
                   ? "Importez votre fichier IFC/GLB ou chargez le bâtiment exemple pour découvrir la maquette."
                   : "Un membre de l’équipe peut importer la maquette du chantier."}
               </p>
-            </section>
-          )}
-          {mode === "planning" && (
-            <section className="panel bim-planning">
-              <div className="section-heading">
-                <div>
-                  <h2>Planning des travaux</h2>
-                  <p>
-                    Dates prévues, dépendances et avancement réel.{" "}
-                    {data.schedule.length} tâche
-                    {data.schedule.length > 1 ? "s" : ""} enregistrée
-                    {data.schedule.length > 1 ? "s" : ""}.
-                  </p>
-                </div>
-                {canWrite && (
-                  <button
-                    className="text-button"
-                    onClick={() => setEditor("new")}
-                  >
-                    <Plus size={16} />
-                    Nouvelle tâche
-                  </button>
-                )}
-              </div>
-              <Gantt tasks={data.schedule} edit={(task) => setEditor(task)} />
             </section>
           )}
         </>

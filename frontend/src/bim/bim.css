@@ -4,16 +4,6 @@
   align-items: center;
   gap: 22px;
 }
-.bim-planning-first {
-  display: flex;
-  flex-direction: column;
-}
-.bim-planning-first > .bim-planning {
-  order: 1;
-}
-.bim-planning-first > .bim-viewer-panel {
-  order: 2;
-}
 .bim-intro h2 {
   font-size: 21px;
   margin: 10px 0;
