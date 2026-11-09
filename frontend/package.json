@@ -13,13 +13,16 @@
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "three": "^0.180.0",
+    "web-ifc": "^0.0.75"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^4.7.0",
     "prettier": "3.6.2",
     "typescript": "^5.9.0",

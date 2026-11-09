@@ -22,6 +22,7 @@ from pydantic import ValidationError
 
 from .database import connect, initialize
 from .demo import seed_portfolio
+from .bim import MAX_MODEL, install_bim
 from .models import AcceptInvite, Credentials, ENTRY_MODELS, EntryInput, EntryPatch, Invitation, ProjectInput, Registration, TaskInput, TaskPatch
 
 COOKIE = "banyra_session"
@@ -106,8 +107,10 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
             if request.headers.get("sec-fetch-site") == "cross-site" or (origin and origin != expected):
                 return JSONResponse({"detail": "Origine de la requête refusée."}, status_code=403)
             try:
-                if int(request.headers.get("content-length", "0")) > MAX_FILE + 100000:
-                    return JSONResponse({"detail": "Fichier trop volumineux (10 Mo maximum)."}, status_code=413)
+                model_upload = request.url.path.endswith("/bim/models")
+                limit = MAX_MODEL if model_upload else MAX_FILE
+                if int(request.headers.get("content-length", "0")) > limit + 100000:
+                    return JSONResponse({"detail": f"Fichier trop volumineux ({50 if model_upload else 10} Mo maximum)."}, status_code=413)
             except ValueError:
                 return JSONResponse({"detail": "Requête invalide."}, status_code=400)
         response = await call_next(request)
@@ -130,7 +133,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         finally:
             connection.close()
 
-    def user(request: Request, connection=Depends(db)):
+    def user(request: Request, connection=Depends(db, scope="function")):
         raw = request.cookies.get(COOKIE, "")
         session = connection.execute("SELECT s.*,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=? AND expires>?", (digest(raw), int(time.time()))).fetchone()
         if not session:
@@ -166,12 +169,12 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"user": public_user(account), "csrf": csrf}
 
     @app.get("/api/health")
-    def health(connection=Depends(db)):
+    def health(connection=Depends(db, scope="function")):
         connection.execute("SELECT 1")
         return {"status": "ok", "application": "Banyra"}
 
     @app.post("/api/auth/register", status_code=201)
-    def register(data: Registration, request: Request, response: Response, connection=Depends(db)):
+    def register(data: Registration, request: Request, response: Response, connection=Depends(db, scope="function")):
         throttle(request, "register")
         if os.environ.get("BANYRA_ALLOW_REGISTRATION", "1") != "1":
             fail(403, "Les inscriptions sont fermées. Contactez le responsable de votre chantier.")
@@ -183,7 +186,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return new_session(connection, response, request, account)
 
     @app.post("/api/auth/login")
-    def login(data: Credentials, request: Request, response: Response, connection=Depends(db)):
+    def login(data: Credentials, request: Request, response: Response, connection=Depends(db, scope="function")):
         throttle(request, "login")
         account = connection.execute("SELECT * FROM users WHERE email=?", (data.email,)).fetchone()
         # Constant-cost password work for unknown accounts too.
@@ -194,24 +197,24 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return new_session(connection, response, request, account)
 
     @app.get("/api/auth/session")
-    def session(actor=Depends(user)):
+    def session(actor=Depends(user, scope="function")):
         return {"user": {k: actor[k] for k in ("id", "name", "email")}, "csrf": actor["csrf"]}
 
     @app.post("/api/auth/logout")
-    def logout(request: Request, response: Response, actor=Depends(user), connection=Depends(db)):
+    def logout(request: Request, response: Response, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         connection.execute("DELETE FROM sessions WHERE token_hash=?", (digest(request.cookies.get(COOKIE, "")),))
         response.delete_cookie(COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
         return {"ok": True}
 
     @app.get("/api/projects")
-    def projects(actor=Depends(user), connection=Depends(db)):
+    def projects(actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         return [dict(row) for row in connection.execute("""SELECT p.*,m.role,
             (SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id AND t.status!='done') AS open_tasks
             FROM projects p JOIN members m ON p.id=m.project_id WHERE m.user_id=?
             ORDER BY p.is_demo ASC,p.created_at DESC""", (actor["id"],))]
 
     @app.post("/api/projects", status_code=201)
-    def create_project(data: ProjectInput, actor=Depends(user), connection=Depends(db)):
+    def create_project(data: ProjectInput, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         project_id = uid()
         connection.execute("""INSERT INTO projects
             (id,name,reference,city,client,budget,vat,start_date,owner_id,created_at,end_date,address,province,project_type,area,architect,engineering_office,contractor,site_manager)
@@ -222,13 +225,13 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"id": project_id}
 
     @app.post("/api/demo", status_code=201)
-    def create_demo(actor=Depends(user), connection=Depends(db)):
+    def create_demo(actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         connection.execute("BEGIN IMMEDIATE")
         ids = seed_portfolio(connection, actor)
         return {"id": ids[0] if ids else "", "ids": ids}
 
     @app.post("/api/demo/bootstrap")
-    def bootstrap_demo(actor=Depends(user), connection=Depends(db)):
+    def bootstrap_demo(actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         connection.execute("BEGIN IMMEDIATE")
         if connection.execute("""SELECT 1 FROM members m JOIN projects p ON p.id=m.project_id
             WHERE m.user_id=? AND p.name NOT LIKE '% — Démonstration'""", (actor["id"],)).fetchone():
@@ -237,7 +240,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"created": bool(ids), "ids": ids}
 
     @app.put("/api/projects/{project_id}")
-    def edit_project(project_id: str, data: ProjectInput, actor=Depends(user), connection=Depends(db)):
+    def edit_project(project_id: str, data: ProjectInput, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, owner=True)
         connection.execute("""UPDATE projects SET name=?,reference=?,city=?,client=?,budget=?,vat=?,start_date=?,end_date=?,address=?,province=?,project_type=?,area=?,architect=?,engineering_office=?,contractor=?,site_manager=? WHERE id=?""",
             (data.name, data.reference, data.city, data.client, money(data.budget), str(data.vat), str(data.start_date), str(data.end_date or ""), data.address, data.province, data.project_type, money(data.area), data.architect, data.engineering_office, data.contractor, data.site_manager, project_id))
@@ -245,7 +248,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"ok": True}
 
     @app.get("/api/projects/{project_id}/workspace")
-    def workspace(project_id: str, actor=Depends(user), connection=Depends(db)):
+    def workspace(project_id: str, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         role = access(connection, project_id, actor)
         project = dict(connection.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone())
         project["role"] = role
@@ -269,7 +272,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
             fail(422, "Validez tous les points de contrôle avant la clôture.")
 
     @app.post("/api/projects/{project_id}/tasks", status_code=201)
-    def create_task(project_id: str, data: TaskInput, actor=Depends(user), connection=Depends(db)):
+    def create_task(project_id: str, data: TaskInput, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, write=True)
         validate_task(connection, project_id, data)
         task_id = uid()
@@ -278,7 +281,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"id": task_id}
 
     @app.put("/api/projects/{project_id}/tasks/{task_id}")
-    def edit_task(project_id: str, task_id: str, data: TaskPatch, actor=Depends(user), connection=Depends(db)):
+    def edit_task(project_id: str, task_id: str, data: TaskPatch, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, write=True)
         old = connection.execute("SELECT * FROM tasks WHERE id=? AND project_id=?", (task_id, project_id)).fetchone()
         if not old:
@@ -348,7 +351,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return clean
 
     @app.post("/api/projects/{project_id}/entries", status_code=201)
-    def create_entry(project_id: str, data: EntryInput, actor=Depends(user), connection=Depends(db)):
+    def create_entry(project_id: str, data: EntryInput, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, write=True)
         # Serialise read/validate/write, including cumulative valuation checks.
         connection.execute("BEGIN IMMEDIATE")
@@ -359,7 +362,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"id": entry_id}
 
     @app.put("/api/projects/{project_id}/entries/{entry_id}")
-    def edit_entry(project_id: str, entry_id: str, data: EntryPatch, actor=Depends(user), connection=Depends(db)):
+    def edit_entry(project_id: str, entry_id: str, data: EntryPatch, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, write=True)
         connection.execute("BEGIN IMMEDIATE")
         old = connection.execute("SELECT * FROM entries WHERE id=? AND project_id=?", (entry_id, project_id)).fetchone()
@@ -373,7 +376,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"ok": True}
 
     @app.post("/api/projects/{project_id}/invitations", status_code=201)
-    def invite(project_id: str, data: Invitation, actor=Depends(user), connection=Depends(db)):
+    def invite(project_id: str, data: Invitation, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, owner=True)
         token = secrets.token_urlsafe(32)
         invite_id = uid()
@@ -382,7 +385,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"path": f"/?invitation={token}", "expires_in_days": 7}
 
     @app.post("/api/invitations/accept")
-    def accept(data: AcceptInvite, actor=Depends(user), connection=Depends(db)):
+    def accept(data: AcceptInvite, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         connection.execute("BEGIN IMMEDIATE")
         invitation = connection.execute("SELECT * FROM invitations WHERE token_hash=? AND used=0 AND expires>?", (digest(data.token), int(time.time()))).fetchone()
         if not invitation:
@@ -395,7 +398,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"project_id": invitation["project_id"]}
 
     @app.delete("/api/projects/{project_id}/members/{member_id}")
-    def remove_member(project_id: str, member_id: str, actor=Depends(user), connection=Depends(db)):
+    def remove_member(project_id: str, member_id: str, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, owner=True)
         if member_id == actor["id"]:
             fail(422, "Le propriétaire ne peut pas se retirer du chantier.")
@@ -406,7 +409,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"ok": True}
 
     @app.post("/api/projects/{project_id}/files", status_code=201)
-    async def upload(project_id: str, file: UploadFile = File(), label: str = Form(""), revision: str = Form("A"), task_id: str = Form(""), entry_id: str = Form(""), actor=Depends(user), connection=Depends(db)):
+    async def upload(project_id: str, file: UploadFile = File(), label: str = Form(""), revision: str = Form("A"), task_id: str = Form(""), entry_id: str = Form(""), actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, write=True)
         if task_id and not connection.execute("SELECT 1 FROM tasks WHERE id=? AND project_id=?", (task_id, project_id)).fetchone():
             fail(422, "Action introuvable sur ce chantier.")
@@ -438,12 +441,14 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         return {"id": file_id}
 
     @app.get("/api/projects/{project_id}/files/{file_id}")
-    def download(project_id: str, file_id: str, actor=Depends(user), connection=Depends(db)):
+    def download(project_id: str, file_id: str, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor)
         record = connection.execute("SELECT * FROM files WHERE id=? AND project_id=?", (file_id, project_id)).fetchone()
         if not record or not (uploads / record["id"]).is_file():
             fail(404, "Fichier introuvable.")
         return FileResponse(uploads / record["id"], media_type=record["mime"], filename=record["name"], content_disposition_type="inline")
+
+    install_bim(app, user=user, db=db, access=access, uploads=uploads, audit=audit, uid=uid, now=now)
 
     # Production serves the compiled Banyra frontend from this same server.
     frontend_dir = frontend_dir or Path(__file__).resolve().parents[1] / "frontend" / "dist"
@@ -456,7 +461,7 @@ def create_app(data_dir: Path | None = None, frontend_dir: Path | None = None, s
         def index(path: str):
             if path == "api" or path.startswith("api/"):
                 fail(404, "Route inconnue.")
-            if path in {"third-party.txt", "plus-jakarta-sans-license.txt"}:
+            if path in {"third-party.txt", "plus-jakarta-sans-license.txt", "bim-libraries.txt"}:
                 return FileResponse(frontend_dir / path, media_type="text/plain")
             return FileResponse(frontend_dir / "index.html", headers={"Cache-Control": "no-cache"})
 

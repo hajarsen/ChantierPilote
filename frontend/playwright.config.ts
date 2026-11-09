@@ -19,7 +19,12 @@ export default defineConfig({
     launchOptions: process.env.BANYRA_CHROMIUM
       ? {
           executablePath: process.env.BANYRA_CHROMIUM,
-          args: ["--no-sandbox", "--disable-dev-shm-usage"],
+          args: [
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--enable-unsafe-swiftshader",
+            "--use-angle=swiftshader",
+          ],
         }
       : {},
   },

@@ -56,6 +56,21 @@ CREATE TABLE IF NOT EXISTS contacts (
  id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
  name TEXT NOT NULL, role TEXT NOT NULL, company TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS bim_models (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
+ name TEXT NOT NULL, filename TEXT NOT NULL, format TEXT NOT NULL,
+ size INTEGER NOT NULL, catalog TEXT NOT NULL DEFAULT '[]',
+ created_by TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS models_by_project ON bim_models(project_id);
+CREATE TABLE IF NOT EXISTS schedule (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
+ model_id TEXT REFERENCES bim_models(id), title TEXT NOT NULL, trade TEXT NOT NULL,
+ responsible TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT NOT NULL,
+ progress INTEGER NOT NULL, element_ids TEXT NOT NULL, predecessors TEXT NOT NULL,
+ notes TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS schedule_by_project ON schedule(project_id);
 """
 
 

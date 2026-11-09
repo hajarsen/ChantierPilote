@@ -3,6 +3,8 @@ import React, {
   useId,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -12,6 +14,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Building2,
+  Box,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -52,10 +55,13 @@ import {
 } from "./api";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./style.css";
+const BimPage = lazy(() => import("./bim/BimPage"));
 
 const nav = [
   ["overview", "Vue d’ensemble", LayoutDashboard],
   ["projects", "Mes chantiers", Building2],
+  ["bim", "Maquette BIM · 3D", Box],
+  ["planning", "Planning · 4D", CalendarDays],
   ["tasks", "Actions terrain", ClipboardList],
   ["quality", "Contrôles qualité", ShieldCheck],
   ["safety", "Sécurité", ShieldCheck],
@@ -1871,7 +1877,21 @@ function App() {
               Chargement du chantier…
             </div>
           ) : workspace ? (
-            <Content />
+            ["bim", "planning"].includes(view) ? (
+              <Suspense
+                fallback={
+                  <p className="loading">Chargement de l’espace BIM…</p>
+                }
+              >
+                <BimPage
+                  key={projectId}
+                  project={workspace.project}
+                  mode={view as "bim" | "planning"}
+                />
+              </Suspense>
+            ) : (
+              <Content />
+            )
           ) : (
             <section className="panel">
               <Empty

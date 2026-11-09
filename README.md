@@ -60,6 +60,12 @@ Cette version utilise sa propre base ; elle ne lit ni ne supprime les anciennes 
 - Réunions et comptes rendus partagés.
 - Plans PDF et photos avec révision explicite, consultation et stockage privé.
 - Rapport du chantier imprimable et enregistrable en PDF par le navigateur.
+- Espace BIM natif : import privé IFC/GLB, rotation, zoom, sélection multiple,
+  propriétés IFC et jeux de propriétés, matériaux, niveaux et encombrement,
+  visibilité par catégorie et isolation d’objets.
+- Planning Gantt enregistré par chantier : lots, responsable, début/fin,
+  avancement réel, prédécesseurs, validation des dépendances et conflits d’édition.
+- Liaisons des tâches aux éléments d’une maquette et simulation 4D datée.
 - Journal des contributions et protection contre l’écrasement concurrent des actions et documents.
 
 Tous les boutons correspondent à des opérations enregistrées dans la base.
@@ -67,10 +73,49 @@ Les données d’un compte ne sont pas montrées à un autre sans invitation.
 Les montants financiers sont **hors taxes** ; aucune règle légale ou taux fiscal
 marocain n’est supposé automatiquement.
 
+## Maquette BIM et planning
+
+Dans le menu, ouvrez **Maquette BIM · 3D** ou **Planning · 4D**. Les chantiers de
+démonstration reçoivent, à la première ouverture de cet espace, un véritable
+fichier IFC4 R+2 généré pour Banyra : trois niveaux, 30 éléments (dalles, poteaux,
+voiles) et trois tâches de gros œuvre. Le bouton « Maquette exemple R+2 » permet
+également de l’ajouter à un autre chantier, une seule fois.
+
+Importez votre export `.ifc` (IFC2x3/IFC4) ou `.glb` (glTF binaire 2.0), jusqu’à
+50 Mo. Pour Revit, exportez en IFC ; le format RVT natif n’est pas lu. Le fichier
+est conservé sur le serveur privé du chantier et la géométrie est calculée dans
+le navigateur. Les éléments sont indexés après l’ouverture du fichier. Chaque
+import est conservé séparément ; les tâches restent liées à leur fichier d’origine.
+Les identifiants IFC appartiennent à cette version du fichier ; les changements
+entre révisions et le transfert automatique des liens ne sont pas implémentés.
+
+Cliquez un objet ou cochez plusieurs éléments, puis **Lier au planning**. Vous
+pouvez aussi créer une tâche sans maquette. Saisissez les dates, le responsable,
+l’avancement réel et les prédécesseurs. Un successeur doit commencer le lendemain
+de la fin de ses prédécesseurs ou plus tard. Les modifications incompatibles sont
+refusées ; les tâches ne sont pas décalées automatiquement.
+
+Activez **Simulation 4D du planning** et parcourez les dates. Les couleurs
+représentent les dates prévues (à venir, prévu en cours, prévu terminé), pas une
+mesure automatique de l’avancement réel. Un élément relié à plusieurs tâches
+reste à venir s’il a encore une tâche future, sauf si une tâche est en cours.
+L’avancement réel, de 0 à 100 %, reste une saisie explicite dans le planning.
+
+Le visualiseur nécessite WebGL et un navigateur récent. Il limite une maquette à
+20 000 objets et 4 millions de sommets ; la complexité géométrique peut nécessiter
+un export par bâtiment/lot même sous 50 Mo. Le GLB doit intégrer ses ressources,
+sans URL externe, compression Draco ou extension obligatoire. Les séquences 4D
+ne sont pas exportées en vidéo. Il n’y a pas encore de coupe, détection de clash,
+édition IFC, import MS Project, calcul du chemin critique ou liens financiers 5D.
+La configuration Caddy inclut l’autorisation d’évaluation JavaScript/WebAssembly
+nécessaire aux liaisons Emscripten de Web-IFC. Les scripts restent locaux et les
+balises de script sont limitées à la même origine. Les tests BIM appliquent
+également cette politique HTTP pour vérifier la lecture en conditions déployées.
+
 ## Limites de ce premier MVP
 
-La visualisation IFC/3D, les annotations et mesures de plans, les liaisons 4D/5D,
-le BPU détaillé, les signatures, les notifications par e-mail et la synchronisation
+Les annotations et mesures de plans, les métrés/coûts 5D, le BPU détaillé,
+les signatures, les notifications par e-mail et la synchronisation
 hors connexion ne sont pas implémentés. Ils ne sont pas proposés comme des fonctions
 disponibles dans l’interface. Le PDF est un rapport de suivi, pas un document fiscal.
 Les invitations et les exports sont à partager par le responsable.
@@ -107,7 +152,7 @@ Ne copiez pas uniquement le fichier SQLite pendant que des écritures sont en co
 ## Développement et tests
 
 ```bash
-.venv/bin/pytest backend/test_app.py -q
+.venv/bin/pytest backend/test_app.py backend/test_bim.py -q
 npm --prefix frontend run build
 ```
 
