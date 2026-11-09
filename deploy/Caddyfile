@@ -1,0 +1,13 @@
+{$BANYRA_DOMAIN} {
+    encode zstd gzip
+    request_body {
+        max_size 11MB
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        Referrer-Policy same-origin
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    }
+    reverse_proxy banyra:8010
+}

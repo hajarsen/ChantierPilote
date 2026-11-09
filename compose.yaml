@@ -1,0 +1,37 @@
+services:
+  banyra:
+    build: .
+    restart: unless-stopped
+    environment:
+      BANYRA_SECURE_COOKIES: "1"
+      BANYRA_PUBLIC_ORIGIN: https://${BANYRA_DOMAIN:?Renseignez BANYRA_DOMAIN dans .env}
+      BANYRA_ALLOW_REGISTRATION: ${BANYRA_ALLOW_REGISTRATION:-1}
+    volumes:
+      - banyra-data:/data
+    expose:
+      - "8010"
+    networks:
+      - private
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      BANYRA_DOMAIN: ${BANYRA_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - private
+    depends_on:
+      banyra:
+        condition: service_healthy
+volumes:
+  banyra-data:
+  caddy-data:
+  caddy-config:
+networks:
+  private:
