@@ -38,4 +38,4 @@ vers les sources de Web-IFC sont dans `frontend/public/bim-libraries.txt`, servi
 
 ## Maquette IFC de démonstration
 
-Le fichier `backend/assets/Ifc2x3_Duplex_Architecture.ifc` est un modèle de duplex au format IFC2x3 provenant du dépôt [youshengCode/IfcSampleFiles](https://github.com/youshengCode/IfcSampleFiles/blob/main/Ifc2x3_Duplex_Architecture.ifc). Le dépôt source le présente comme un échantillon destiné aux tests logiciels, mais ne précise pas de licence. Le fichier est conservé comme maquette de démonstration, avec ses métadonnées d’origine et la référence à sa source. Les droits de redistribution doivent être confirmés avant toute publication publique de ce dépôt.
+Le fichier `backend/assets/Ifc2x3_Duplex_Architecture.ifc` est un modèle de duplex au format IFC2x3 provenant du dépôt [youshengCode/IfcSampleFiles](https://github.com/youshengCode/IfcSampleFiles/blob/main/Ifc2x3_Duplex_Architecture.ifc). Il est utilisé comme maquette de démonstration, avec ses métadonnées d’origine et la référence à sa source.
