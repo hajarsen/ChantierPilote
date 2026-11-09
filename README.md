@@ -20,11 +20,11 @@ L’objectif est de développer progressivement un outil utile au quotidien, en 
 
 Une visite enregistrée de Banyra : vue d’ensemble, inspection de la maquette BIM,
 simulation 4D, actions terrain, journal de chantier et suivi des dépenses en MAD.
-La vidéo est sans voix, avec des titres en français et uniquement des données fictives.
+La vidéo est un enregistrement d’écran fourni par l’autrice du projet, publié sans audio. Les projets et valeurs affichés sont des exemples de démonstration.
 
 [![Aperçu animé de la démonstration Banyra](docs/media/demo-apercu.gif)](docs/media/banyra-demo.mp4)
 
-**[▶ Ouvrir la vidéo complète — 45 secondes (MP4)](docs/media/banyra-demo.mp4)**
+**[▶ Ouvrir la vidéo complète — environ 3 min 15 s (MP4)](docs/media/banyra-demo.mp4)**
 
 ## Banyra en images
 
