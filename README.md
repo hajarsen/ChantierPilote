@@ -6,6 +6,8 @@ Le projet explore l’application du numérique au génie civil, notamment la co
 
 > **Statut** : première version fonctionnelle en cours de développement. Les données d’exemple sont fictives. Les montants sont exprimés en dirhams marocains (MAD), hors taxes.
 
+La maquette BIM proposée en démonstration est un duplex résidentiel au format IFC2x3. Le fichier source et sa provenance sont documentés dans [THIRD_PARTY.md](THIRD_PARTY.md).
+
 ## Usages pour le suivi de chantier
 
 Banyra regroupe les principales informations nécessaires au suivi d’un projet de construction :

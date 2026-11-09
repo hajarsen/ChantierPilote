@@ -1,65 +1,101 @@
-"""A small original IFC4 building, generated in metres for Banyra's demo."""
-import uuid
+"""IFC2x3 duplex model used in Banyra's architecture demo."""
+import re
+from pathlib import Path
+
+MODEL_PATH = Path(__file__).with_name("assets") / "Ifc2x3_Duplex_Architecture.ifc"
+
+# Geometric building elements that the viewer can select and link to tasks.
+PRODUCT_TYPES = frozenset({
+    "IFCBEAM", "IFCBUILDINGELEMENTPROXY", "IFCCOLUMN", "IFCCOVERING",
+    "IFCDOOR", "IFCFOOTING", "IFCFURNISHINGELEMENT", "IFCMEMBER",
+    "IFCPLATE", "IFCRAILING", "IFCRAMP", "IFCRAMPFLIGHT", "IFCSLAB",
+    "IFCSTAIR", "IFCSTAIRFLIGHT", "IFCWALL", "IFCWALLSTANDARDCASE",
+    "IFCWINDOW", "IFCROOF", "IFCPILE",
+})
+
+
+def _arguments(value):
+    """Split STEP arguments while preserving commas inside nested values."""
+    result, current = [], []
+    depth = 0
+    quoted = False
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char == "'":
+            current.append(char)
+            if quoted and index + 1 < len(value) and value[index + 1] == "'":
+                current.append("'")
+                index += 1
+            else:
+                quoted = not quoted
+        elif not quoted and char == "(":
+            depth += 1
+            current.append(char)
+        elif not quoted and char == ")":
+            depth -= 1
+            current.append(char)
+        elif not quoted and char == "," and depth == 0:
+            result.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+        index += 1
+    result.append("".join(current).strip())
+    return result
+
+
+def _label(value):
+    if value.startswith("'") and value.endswith("'"):
+        return value[1:-1].replace("''", "'").strip()
+    return ""
 
 
 def building_ifc():
-    lines = []
+    content = MODEL_PATH.read_bytes()
+    records = {}
+    for line in content.decode("utf-8-sig").splitlines():
+        match = re.match(r"^#(\d+)\s*=\s*(IFC[A-Z0-9_]+)\((.*)\);$", line)
+        if match:
+            records[match.group(1)] = (match.group(2), _arguments(match.group(3)))
 
-    def add(entity):
-        lines.append(f"#{len(lines) + 1}={entity};")
-        return f"#{len(lines)}"
+    storeys = {}
+    for express_id, (kind, args) in records.items():
+        if kind != "IFCBUILDINGSTOREY" or len(args) < 10:
+            continue
+        try:
+            elevation = float(args[9])
+        except ValueError:
+            elevation = 0.0
+        storeys[express_id] = (_label(args[2]) or "Niveau", elevation)
 
-    def guid():
-        # IFC GlobalId is a 128-bit value encoded in 22 base-64 digits.
-        alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$"
-        value = uuid.uuid4().int
-        result = ""
-        for _ in range(22):
-            result = alphabet[value % 64] + result
-            value //= 64
-        return result
+    element_storey = {}
+    for kind, args in records.values():
+        if kind != "IFCRELCONTAINEDINSPATIALSTRUCTURE" or len(args) < 6:
+            continue
+        structure = re.fullmatch(r"#(\d+)", args[5])
+        if not structure or structure.group(1) not in storeys:
+            continue
+        level_name = storeys[structure.group(1)][0]
+        for related in re.findall(r"#(\d+)", args[4]):
+            element_storey[related] = level_name
 
-    origin = add("IFCCARTESIANPOINT((0.,0.,0.))")
-    z = add("IFCDIRECTION((0.,0.,1.))")
-    x = add("IFCDIRECTION((1.,0.,0.))")
-    axes = add(f"IFCAXIS2PLACEMENT3D({origin},{z},{x})")
-    place = add(f"IFCLOCALPLACEMENT($,{axes})")
-    context = add(f"IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-05,{axes},$)")
-    unit = add("IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.)")
-    units = add(f"IFCUNITASSIGNMENT(({unit}))")
-    project = add(f"IFCPROJECT('{guid()}',$,'Banyra - Batiment exemple',$,$,$,$,({context}),{units})")
-    site = add(f"IFCSITE('{guid()}',$,'Rabat - Demonstration',$,$,{place},$,$,.ELEMENT.,$,$,$,$,$)")
-    building = add(f"IFCBUILDING('{guid()}',$,'Residence Al Manar',$,$,{place},$,$,.ELEMENT.,$,$,$)")
-    add(f"IFCRELAGGREGATES('{guid()}',$,$,$,{project},({site}))")
-    add(f"IFCRELAGGREGATES('{guid()}',$,$,$,{site},({building}))")
-    floors = []
+    levels_by_elevation = [
+        name for name, _ in sorted(storeys.values(), key=lambda item: item[1])
+    ]
     products = []
-    for level in range(3):
-        floor = add(f"IFCBUILDINGSTOREY('{guid()}',$,'Niveau {level}',$,$,{place},$,$,.ELEMENT.,{level * 3.2})")
-        floors.append(floor)
-        members = []
+    for express_id, (kind, args) in records.items():
+        if kind not in PRODUCT_TYPES or len(args) < 7 or args[6] == "$":
+            continue
+        name = _label(args[2]) if len(args) > 2 else ""
+        level = element_storey.get(express_id, "Éléments communs")
+        if not name:
+            name = f"{kind.removeprefix('IFC').replace('_', ' ').title()} #{express_id}"
+        products.append((express_id, level, kind, name[:250]))
 
-        def box(kind, name, px, py, pz, width, depth, height, predefined):
-            point = add(f"IFCCARTESIANPOINT(({px},{py},{pz}))")
-            axis = add(f"IFCAXIS2PLACEMENT3D({point},{z},{x})")
-            location = add(f"IFCLOCALPLACEMENT($,{axis})")
-            profile = add(f"IFCRECTANGLEPROFILEDEF(.AREA.,$,$,{width},{depth})")
-            solid = add(f"IFCEXTRUDEDAREASOLID({profile},{axes},{z},{height})")
-            rep = add(f"IFCSHAPEREPRESENTATION({context},'Body','SweptSolid',({solid}))")
-            shape = add(f"IFCPRODUCTDEFINITIONSHAPE($,$,({rep}))")
-            entity = add(f"{kind}('{guid()}',$,'{name}',$,$,{location},{shape},$,.{predefined}.)")
-            members.append(entity)
-            products.append((entity[1:], level, kind))
-            material = add("IFCMATERIAL('Beton arme',$,$)")
-            add(f"IFCRELASSOCIATESMATERIAL('{guid()}',$,$,$,({entity}),{material})")
-
-        elevation = level * 3.2
-        box("IFCSLAB", f"Dalle niveau {level}", 0., 0., elevation, 14., 10., .25, "FLOOR")
-        for col, (cx, cy) in enumerate([(-6., -4.), (0., -4.), (6., -4.), (-6., 4.), (0., 4.), (6., 4.)]):
-            box("IFCCOLUMN", f"Poteau N{level}-{col + 1}", cx, cy, elevation + .25, .4, .4, 2.95, "COLUMN")
-        for number, (px, py, width, depth) in enumerate([(0., -4.8, 14., .2), (0., 4.8, 14., .2), (-6.8, 0., .2, 9.4)]):
-            box("IFCWALL", f"Voile N{level}-{number + 1}", px, py, elevation + .25, width, depth, 2.7, "STANDARD")
-        add(f"IFCRELCONTAINEDINSPATIALSTRUCTURE('{guid()}',$,$,$,({','.join(members)}),{floor})")
-    add(f"IFCRELAGGREGATES('{guid()}',$,$,$,{building},({','.join(floors)}))")
-    content = "ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Banyra demo - donnees fictives'),'2;1');\nFILE_NAME('banyra-demo.ifc','',('Banyra'),('Banyra'),'Banyra','Banyra','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n" + "\n".join(lines) + "\nENDSEC;\nEND-ISO-10303-21;\n"
-    return content.encode(), products
+    level_order = {name: index for index, name in enumerate(levels_by_elevation)}
+    level_order["Éléments communs"] = len(level_order)
+    products.sort(key=lambda item: (level_order.get(item[1], len(level_order)), int(item[0])))
+    if not products:
+        raise ValueError("La maquette IFC de démonstration ne contient aucun élément exploitable.")
+    return content, products

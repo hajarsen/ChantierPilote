@@ -203,24 +203,69 @@ def install_bim(app, *, user, db, access, uploads: Path, audit, uid, now):
     def demo(project_id: str, actor=Depends(user, scope="function"), connection=Depends(db, scope="function")):
         access(connection, project_id, actor, write=True)
         connection.execute("BEGIN IMMEDIATE")
-        existing = connection.execute("SELECT id FROM bim_models WHERE project_id=? AND filename='banyra-demo.ifc'", (project_id,)).fetchone()
+        filename = "Ifc2x3_Duplex_Architecture.ifc"
+        existing = connection.execute(
+            "SELECT id FROM bim_models WHERE project_id=? AND filename=?",
+            (project_id, filename),
+        ).fetchone()
         if existing:
             return {"id": existing["id"]}
         model_id = uid()
         content, products = building_ifc()
         today = datetime.now(ZoneInfo("Africa/Casablanca")).date()
-        labels = {"IFCSLAB": "Dalle", "IFCCOLUMN": "Poteau", "IFCWALL": "Voile"}
-        catalog = [{"id": id_, "name": f"{labels[kind]} — niveau {level}", "category": kind} for id_, level, kind in products]
+        catalog = [
+            {"id": id_, "name": name, "category": kind}
+            for id_, _, kind, name in products
+        ]
         target = uploads / model_id
         try:
             target.write_bytes(content)
-            connection.execute("INSERT INTO bim_models VALUES(?,?,?,?,?,?,?,?,?)", (model_id, project_id, "Bâtiment exemple R+2 — IFC4", "banyra-demo.ifc", "ifc", len(content), json.dumps(catalog), actor["id"], now()))
+            connection.execute(
+                "INSERT INTO bim_models VALUES(?,?,?,?,?,?,?,?,?)",
+                (
+                    model_id,
+                    project_id,
+                    "Duplex résidentiel — architecture IFC2x3",
+                    filename,
+                    "ifc",
+                    len(content),
+                    json.dumps(catalog, ensure_ascii=False),
+                    actor["id"],
+                    now(),
+                ),
+            )
+            grouped = {}
+            for element_id, level, _, _ in products:
+                grouped.setdefault(level, []).append(element_id)
             previous = []
-            for level in range(3):
-                tid = uid()
-                connection.execute("INSERT INTO schedule VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1)", (tid, project_id, model_id, f"Gros œuvre — niveau {level}", "Gros œuvre", actor["name"], str(today + timedelta(days=level * 14 - 14)), str(today + timedelta(days=level * 14 - 1)), [100, 35, 0][level], json.dumps([id_ for id_, lev, _ in products if lev == level]), json.dumps(previous), "Planning fictif pour découvrir la simulation 4D."))
-                previous = [tid]
-            audit(connection, project_id, actor["id"], "Maquette IFC et planning de démonstration créés")
+            for index, (level, element_ids) in enumerate(grouped.items()):
+                titles = {
+                    "T/FDN": "Fondations et infrastructure",
+                    "Level 1": "Gros œuvre — niveau 1",
+                    "Level 2": "Gros œuvre — niveau 2",
+                    "Roof": "Toiture et éléments en hauteur",
+                    "Éléments communs": "Éléments communs — équipements et finitions",
+                }
+                task_id = uid()
+                connection.execute(
+                    "INSERT INTO schedule VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1)",
+                    (
+                        task_id,
+                        project_id,
+                        model_id,
+                        titles.get(level, f"Gros œuvre — {level}"),
+                        "Gros œuvre",
+                        actor["name"],
+                        str(today + timedelta(days=index * 14 - 14)),
+                        str(today + timedelta(days=index * 14 - 1)),
+                        [100, 35, 0, 0, 0][min(index, 4)],
+                        json.dumps(element_ids),
+                        json.dumps(previous),
+                        "Planning fictif lié aux éléments de la maquette duplex de démonstration.",
+                    ),
+                )
+                previous = [task_id]
+            audit(connection, project_id, actor["id"], "Maquette duplex IFC2x3 et planning de démonstration créés")
         except BaseException:
             target.unlink(missing_ok=True)
             raise

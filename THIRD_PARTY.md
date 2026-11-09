@@ -34,3 +34,8 @@ Three.js et Web-IFC sont des bibliothèques générales utilisées sans modifica
 chargées localement et seulement dans l’espace BIM. Leurs notices et les liens
 vers les sources de Web-IFC sont dans `frontend/public/bim-libraries.txt`, servi
 à `/bim-libraries.txt`. Aucun service de traitement externe n’est utilisé.
+
+
+## Maquette IFC de démonstration
+
+`backend/assets/Ifc2x3_Duplex_Architecture.ifc` is the IFC2x3 duplex sample supplied from [youshengCode/IfcSampleFiles](https://github.com/youshengCode/IfcSampleFiles/blob/main/Ifc2x3_Duplex_Architecture.ifc). The source repository describes its files as software-test samples but does not declare a license. The IFC file is retained as a demonstration fixture with its original metadata and source attribution. Confirm redistribution rights before making this repository public.

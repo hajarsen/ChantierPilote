@@ -76,7 +76,12 @@ export default function BimPage({ project, mode }: Props) {
   async function load(preferred?: string) {
     let next = await api<BimState>(base);
     if (!active.current) return;
-    if (!next.models.length && project.is_demo && canWrite) {
+    const demoModel = "Ifc2x3_Duplex_Architecture.ifc";
+    if (
+      project.is_demo &&
+      canWrite &&
+      !next.models.some((item) => item.filename === demoModel)
+    ) {
       await api(`${base}/demo`, "POST");
       if (!active.current) return;
       next = await api<BimState>(base);
@@ -292,7 +297,7 @@ export default function BimPage({ project, mode }: Props) {
                     }
                   >
                     <Box size={16} />
-                    Maquette exemple R+2
+                    Maquette exemple duplex
                   </button>
                   {mode === "planning" && (
                     <button
