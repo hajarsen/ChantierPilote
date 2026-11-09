@@ -4,7 +4,7 @@
 
 Le projet explore l’application du numérique au génie civil, notamment la coordination entre les activités de chantier, les documents techniques, le planning et la maquette BIM.
 
-> **Statut** : première version fonctionnelle en cours de développement. Les données d’exemple sont fictives. Les montants sont exprimés en dirhams marocains (MAD), hors taxes.
+> **Statut : prototype en cours de développement — ce n’est pas une version finale.** L’interface, les fonctionnalités et les modèles de données peuvent encore évoluer. Les captures et la vidéo présentent l’état actuel du prototype avec des données fictives. Les montants sont exprimés en dirhams marocains (MAD), hors taxes.
 
 La maquette BIM proposée en démonstration est un duplex résidentiel au format IFC2x3. Le fichier source et sa provenance sont documentés dans [THIRD_PARTY.md](THIRD_PARTY.md).
 
@@ -91,6 +91,22 @@ La base SQLite et les pièces jointes sont conservées dans le dossier `data/`.
 La simulation 4D visualise le phasage planifié. Cette version ne calcule pas automatiquement le chemin critique et ne détecte pas les interférences entre éléments de maquette. Le transfert automatique des liens entre les révisions d’une maquette n’est pas disponible.
 
 Les métrés détaillés, les coûts 5D, les annotations de plans, les signatures, les notifications par e-mail et la synchronisation hors connexion ne sont pas inclus dans cette version.
+
+## Axes de développement envisagés
+
+Les évolutions suivantes constituent des pistes pour les prochaines étapes du projet. Elles ne sont pas encore implémentées dans la version présentée.
+
+| Axe | Objectif concret |
+| --- | --- |
+| **Gestion des stocks** | Suivre les entrées, sorties et transferts de matériaux entre chantiers, réaliser les inventaires et signaler les besoins de réapprovisionnement. |
+| **Estimation budgétaire** | Préparer les estimations par lot et corps d’état à partir de quantités et de prix unitaires en MAD, puis comparer le prévisionnel aux dépenses engagées et réelles. |
+| **Lecture des plans DWG/DXF** | Importer et consulter les plans 2D, gérer les calques, calibrer l’échelle et relever les dimensions utiles au suivi des travaux. |
+| **Avant-métré automatique assisté par IA** | Proposer l’extraction des surfaces, longueurs et volumes à partir des plans et des maquettes, en reliant chaque quantité à sa source pour vérification par l’ingénieur. |
+| **Métrés et coûts 5D** | Relier les quantités de la maquette aux lignes du bordereau des prix et du devis, puis suivre l’incidence financière des modifications. |
+| **Planning avancé** | Étudier le calcul du chemin critique, le suivi des écarts entre prévisionnel et réalisé, ainsi que les liens entre tâches, approvisionnements et ressources. |
+| **Utilisation sur le terrain et hors connexion** | Faciliter la saisie des journaux, photos et réserves sur mobile, puis synchroniser les informations au retour de la connexion. |
+
+Pour l’avant-métré assisté par IA, la vérification de l’échelle, des unités et des quantités par un professionnel fera partie du fonctionnement prévu avant leur utilisation dans une estimation ou un devis.
 
 ## Technologies
 
